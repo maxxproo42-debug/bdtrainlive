@@ -65,6 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAllTrainsAndStations();
     performInitialSearch();
     checkEticketSession();
+    updateLiveNavClock();
+    setInterval(updateLiveNavClock, 1000);
 
     // Auto-refresh live map every 8 seconds
     mapAutoRefreshInterval = setInterval(() => {
@@ -170,6 +172,7 @@ function setMapLayer(mode) {
 // Tab Switching
 function switchTab(tabId) {
     currentTab = tabId;
+    closeMobileNav();
     document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.nav-tab').forEach(el => {
         el.classList.remove('bg-emerald-600', 'text-white', 'shadow-md');
@@ -4218,4 +4221,47 @@ async function saveEticketDirectToken(event) {
             if (window.lucide) window.lucide.createIcons();
         }
     }
+}
+
+/* ========================================================
+   MOBILE DRAWER NAVIGATION & LIVE CLOCK (RESULT ENGINE STYLE)
+   ======================================================== */
+
+function toggleMobileNav() {
+    const drawer = document.getElementById('mobile-nav-drawer');
+    if (drawer) {
+        drawer.classList.toggle('open');
+        if (window.lucide) window.lucide.createIcons();
+    }
+}
+
+function closeMobileNav() {
+    const drawer = document.getElementById('mobile-nav-drawer');
+    if (drawer) {
+        drawer.classList.remove('open');
+    }
+}
+
+function updateLiveNavClock() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    });
+    const dateStr = now.toLocaleDateString('bn-BD', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+
+    const clockEl = document.getElementById('nav-live-clock');
+    const mClockEl = document.getElementById('mobile-live-clock');
+    const mDateEl = document.getElementById('mobile-live-date');
+
+    if (clockEl) clockEl.textContent = timeStr;
+    if (mClockEl) mClockEl.textContent = timeStr;
+    if (mDateEl) mDateEl.textContent = dateStr;
 }

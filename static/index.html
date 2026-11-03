@@ -63,6 +63,110 @@
       70% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
       100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
+
+    /* Result Engine Style Creator & Navigation Elements */
+    .title-author-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      vertical-align: middle;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .title-author-tag:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    }
+    .nav-creator-btn {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 0.45rem 0.85rem;
+      border-radius: 10px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .nav-creator-btn:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: #38bdf8;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.25);
+    }
+    .nav-hamburger {
+      display: none;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      font-size: 1.25rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 10px;
+      cursor: pointer;
+      line-height: 1;
+      transition: all 0.2s;
+    }
+    .nav-hamburger:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .nav-clock-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 9999px;
+      padding: 0.32rem 0.8rem;
+      font-family: monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #38bdf8;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .nav-clock-pill:hover {
+      border-color: rgba(56, 189, 248, 0.55);
+      background: rgba(15, 23, 42, 0.95);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+    }
+    .mobile-nav-drawer {
+      display: none;
+      background: rgba(10, 14, 23, 0.98);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 1rem 1.25rem 1.5rem;
+      flex-direction: column;
+      gap: 0.6rem;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .mobile-nav-drawer.open {
+      display: flex;
+      animation: fadeIn 0.25s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 1024px) {
+      .nav-links-desktop { display: none !important; }
+      .nav-hamburger { display: block; }
+    }
   </style>
 </head>
 <body class="font-sans antialiased pb-16">
@@ -71,50 +175,134 @@
   <header class="glass-nav sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
+        
+        <!-- Brand & Logo -->
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-bdgreen to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-900/40">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-bdgreen to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-900/40 cursor-pointer" onclick="switchTab('map')">
             <i data-lucide="train" class="w-6 h-6 text-white"></i>
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <span class="text-xl font-bold tracking-tight text-white">রেল সেবা <span class="text-emerald-400">প্রো</span></span>
-              <span class="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">লাইভ ট্র্যাকার</span>
+              <span class="text-xl font-bold tracking-tight text-white cursor-pointer" onclick="switchTab('map')">রেল সেবা <span class="text-emerald-400">প্রো</span></span>
+              <a href="https://t.me/ShaifulXD" target="_blank" rel="noopener noreferrer" class="title-author-tag" title="Contact Developer on Telegram: @ShaifulXD">
+                ⚡ by ShaifulXRD ↗
+              </a>
             </div>
-            <p class="text-xs text-slate-400 hidden sm:block">বাংলাদেশ রেলওয়ে স্মার্ট টিকেট অ্যালার্ট ও শিডিউল সিস্টেম</p>
+            <p class="text-xs text-slate-400 hidden sm:block">বাংলাদেশ রেলওয়ে স্মার্ট টিকেট অ্যালার্ট ও ৩ডি শিডিউল সিস্টেম</p>
           </div>
         </div>
 
-        <!-- Navigation Tabs -->
-        <nav class="flex items-center gap-1 sm:gap-2">
-          <button onclick="switchTab('map')" id="tab-btn-map" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 bg-emerald-600 text-white shadow-md">
-            <i data-lucide="map" class="w-4 h-4 text-emerald-300"></i>
-            <span class="font-bold">লাইভ ম্যাপ ট্র্যাকার</span>
+        <!-- Desktop Navigation Tabs (Visible on Desktop >= 1024px) -->
+        <nav class="nav-links-desktop hidden lg:flex items-center gap-1.5">
+          <button onclick="switchTab('map')" id="tab-btn-map" class="nav-tab px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 bg-emerald-600 text-white shadow-md">
+            <i data-lucide="map" class="w-3.5 h-3.5 text-emerald-300"></i>
+            <span>লাইভ ম্যাপ</span>
             <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
           </button>
-          <button onclick="switchTab('station_tickets')" id="tab-btn-station_tickets" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
-            <i data-lucide="ticket" class="w-4 h-4 text-emerald-400"></i>
-            <span class="font-bold">স্টেশন টিকিট স্ক্যানার</span>
-            <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">লাইভ</span>
+          <button onclick="switchTab('station_tickets')" id="tab-btn-station_tickets" class="nav-tab px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="ticket" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>স্টেশন টিকিট স্ক্যানার</span>
           </button>
-          <button onclick="switchTab('search')" id="tab-btn-search" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
-            <i data-lucide="search" class="w-4 h-4"></i>
+          <button onclick="switchTab('search')" id="tab-btn-search" class="nav-tab px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="search" class="w-3.5 h-3.5"></i>
             <span>টিকেট ও রুট</span>
           </button>
-          <button onclick="switchTab('board')" id="tab-btn-board" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
-            <i data-lucide="table" class="w-4 h-4 text-cyan-400"></i>
+          <button onclick="switchTab('board')" id="tab-btn-board" class="nav-tab px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="table" class="w-3.5 h-3.5 text-cyan-400"></i>
             <span>স্টেশন বোর্ড</span>
           </button>
-          <button onclick="switchTab('watcher')" id="tab-btn-watcher" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
-            <i data-lucide="bell-ring" class="w-4 h-4 text-emerald-400"></i>
+          <button onclick="switchTab('watcher')" id="tab-btn-watcher" class="nav-tab px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="bell-ring" class="w-3.5 h-3.5 text-emerald-400"></i>
             <span>সিট অ্যালার্ট</span>
-            <span id="badge-watching" class="hidden w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
           </button>
-          <button onclick="switchTab('guide')" id="tab-btn-guide" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
-            <i data-lucide="book-open" class="w-4 h-4 text-amber-400"></i>
-            <span class="hidden md:inline">ভাড়া ও নিয়ম</span>
+          <button onclick="switchTab('guide')" id="tab-btn-guide" class="nav-tab px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>ভাড়া ও নিয়ম</span>
           </button>
         </nav>
+
+        <!-- Right Side: Live Clock, Telegram Creator, eticket Sync & Hamburger -->
+        <div class="flex items-center gap-2">
+          <!-- Live Clock Pill -->
+          <div class="nav-clock-pill hidden sm:inline-flex" title="বাংলাদেশ লাইভ সময়">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="nav-live-clock">--:--:-- --</span>
+          </div>
+
+          <!-- Telegram Creator Link -->
+          <a href="https://t.me/ShaifulXD" target="_blank" rel="noopener noreferrer" class="nav-creator-btn hidden md:inline-flex" title="Contact Developer on Telegram: @ShaifulXD">
+            ⚡ by ShaifulXRD ↗
+          </a>
+
+          <!-- eticket Sync Button -->
+          <button onclick="openEticketSyncModal()" id="nav-btn-eticket-sync" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow transition">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span id="nav-eticket-sync-text" class="hidden sm:inline">eticket সিঙ্ক</span>
+          </button>
+
+          <!-- Hamburger Button for Mobile Drawer Menu -->
+          <button type="button" class="nav-hamburger" onclick="toggleMobileNav()" title="মেনু খুলুন">
+            ☰
+          </button>
+        </div>
+
       </div>
+    </div>
+
+    <!-- Mobile Drawer Menu (Result Engine Style) -->
+    <div class="mobile-nav-drawer" id="mobile-nav-drawer">
+      <!-- Mobile Clock & Date Widget -->
+      <div class="p-3 bg-slate-900/90 border border-emerald-500/30 rounded-xl text-center mb-2">
+        <div class="text-xs text-slate-400 mb-0.5" id="mobile-live-date">--</div>
+        <div class="font-mono text-base font-extrabold text-cyan-400" id="mobile-live-clock">--:--:-- --</div>
+      </div>
+
+      <!-- Menu Navigation Items -->
+      <button type="button" onclick="switchTab('map'); closeMobileNav();" class="w-full text-left p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-white flex items-center justify-between transition">
+        <span class="flex items-center gap-2">
+          <i data-lucide="map" class="w-4 h-4 text-emerald-400"></i>
+          <span>🗺️ লাইভ ম্যাপ ট্র্যাকার (৩ডি ক্যামেরা ও ক্রসিং অ্যালার্ট)</span>
+        </span>
+        <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+      </button>
+
+      <button type="button" onclick="switchTab('station_tickets'); closeMobileNav();" class="w-full text-left p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center justify-between transition">
+        <span class="flex items-center gap-2">
+          <i data-lucide="ticket" class="w-4 h-4 text-emerald-400"></i>
+          <span>🎫 স্টেশনভিত্তিক লাইভ টিকিট স্ক্যানার</span>
+        </span>
+        <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">লাইভ কোটা</span>
+      </button>
+
+      <button type="button" onclick="switchTab('search'); closeMobileNav();" class="w-full text-left p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-200 flex items-center gap-2 transition">
+        <i data-lucide="search" class="w-4 h-4 text-cyan-400"></i>
+        <span>🔍 আন্তঃনগর ট্রেন ও সিট অনুসন্ধান</span>
+      </button>
+
+      <button type="button" onclick="switchTab('board'); closeMobileNav();" class="w-full text-left p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-200 flex items-center gap-2 transition">
+        <i data-lucide="table" class="w-4 h-4 text-cyan-400"></i>
+        <span>📊 ডিজিটাল স্টেশন ডিসপ্লে বোর্ড</span>
+      </button>
+
+      <button type="button" onclick="switchTab('watcher'); closeMobileNav();" class="w-full text-left p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-200 flex items-center gap-2 transition">
+        <i data-lucide="bell-ring" class="w-4 h-4 text-emerald-400"></i>
+        <span>🚨 সিট হান্টার ও বাতিল টিকিট রাডার</span>
+      </button>
+
+      <button type="button" onclick="switchTab('guide'); closeMobileNav();" class="w-full text-left p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-200 flex items-center gap-2 transition">
+        <i data-lucide="book-open" class="w-4 h-4 text-amber-400"></i>
+        <span>📖 ট্রেনের ভাড়া তালিকা ও জরুরি নিয়মাবলী</span>
+      </button>
+
+      <button type="button" onclick="openEticketSyncModal(); closeMobileNav();" class="w-full text-left p-3 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center gap-2 transition">
+        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+        <span>🔗 বাংলাদেশ রেলওয়ে (eticket) লাইভ সিঙ্ক মোডাল</span>
+      </button>
+
+      <!-- Telegram Contact Link in Drawer -->
+      <a href="https://t.me/ShaifulXD" target="_blank" rel="noopener noreferrer" class="nav-creator-btn w-full justify-center text-center py-2.5 mt-2 shadow-lg">
+        ⚡ Contact Developer on Telegram: @ShaifulXD ↗
+      </a>
     </div>
   </header>
 
@@ -1391,6 +1579,19 @@
           </p>
         </div>
 
+        <!-- Footer Branding & Telegram Signature (Result Engine Style) -->
+        <footer class="mt-12 pt-6 border-t border-slate-800 text-center text-xs text-slate-400 space-y-2">
+          <p>
+            বাংলাদেশ রেলওয়ে ৩ডি লাইভ ট্র্যাকার ও স্মার্ট স্টেশন টিকিট পোর্টাল · Developed with ⚡
+            <a href="https://t.me/ShaifulXD" target="_blank" rel="noopener noreferrer" class="text-cyan-400 font-bold hover:underline" title="Telegram: @ShaifulXD">
+              by ShaifulXRD ↗
+            </a>
+          </p>
+          <p class="text-[11px] text-slate-500">
+            অফিসিয়াল টেলিগ্রাম সাপোর্ট: <a href="https://t.me/ShaifulXD" target="_blank" class="text-emerald-400 font-mono font-bold hover:underline">@ShaifulXD</a> · TTMS এসএমএস ট্র্যাকিং: <strong class="text-slate-300">16318</strong> · Shohoz হেল্পলাইন: <strong class="text-slate-300">16374</strong>
+          </p>
+        </footer>
+
       </div>
 
     </div>
@@ -1486,7 +1687,7 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 max-w-sm"></div>
 
   <!-- App Logic -->
-  <script src="/app.js?v=20261103_eticket_sync_2"></script>
+  <script src="/app.js?v=20261103_menu_quota_v3"></script>
 </body>
 </html>
 
