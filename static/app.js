@@ -281,6 +281,23 @@ function populateStationDropdowns(stations) {
     if (destSelect) destSelect.innerHTML = html;
     if (boardSelect) boardSelect.innerHTML = html;
 
+    const watcherOrigin = document.getElementById('watcher-origin-select');
+    const watcherDest = document.getElementById('watcher-destination-select');
+    const watcherDate = document.getElementById('watcher-journey-date');
+
+    if (watcherOrigin) {
+        watcherOrigin.innerHTML = html;
+        watcherOrigin.value = "Dhaka";
+    }
+    if (watcherDest) {
+        watcherDest.innerHTML = html;
+        watcherDest.value = "Chittagong";
+    }
+    if (watcherDate && !watcherDate.value) {
+        const today = new Date().toISOString().split('T')[0];
+        watcherDate.value = today;
+    }
+
     if (originSelect) originSelect.value = "Dinajpur";
     if (destSelect) destSelect.value = "Rajshahi";
     if (boardSelect) boardSelect.value = "Dinajpur";
@@ -1873,27 +1890,42 @@ function toggleWatcherEngine() {
     const indicator = document.getElementById('radar-indicator');
 
     if (watcherRunning) {
-        btn.innerHTML = `<i data-lucide="square" class="w-4 h-4 text-rose-400"></i><span>মনিটরিং বন্ধ করুন</span>`;
-        btn.classList.remove('from-emerald-600', 'to-teal-600');
-        btn.classList.add('from-rose-600', 'to-red-600');
-        badge.classList.remove('hidden');
-        statusText.textContent = 'সক্রিয় (Active Radar)';
-        statusText.classList.remove('text-slate-300');
-        statusText.classList.add('text-emerald-400');
-        indicator.classList.add('pulse-radar', 'bg-emerald-500/20', 'text-emerald-400');
+        if (btn) {
+            btn.innerHTML = `<i data-lucide="square" class="w-4 h-4 text-rose-300"></i><span>মনিটরিং বন্ধ করুন</span>`;
+            btn.classList.remove('from-emerald-600', 'to-teal-600', 'hover:from-emerald-500', 'hover:to-teal-500');
+            btn.classList.add('from-rose-600', 'to-red-600', 'hover:from-rose-500', 'hover:to-red-500');
+        }
+        if (badge) badge.classList.remove('hidden');
+        if (statusText) {
+            statusText.textContent = 'সক্রিয় (Active Radar)';
+            statusText.classList.remove('text-slate-300');
+            statusText.classList.add('text-emerald-400');
+        }
+        if (indicator) {
+            indicator.classList.add('pulse-radar', 'bg-emerald-500/20', 'text-emerald-400');
+            indicator.classList.remove('bg-slate-800', 'text-slate-400');
+        }
 
         logWatcher('🟢 লাইভ সিট হান্টার ইঞ্জিন সক্রিয় করা হয়েছে...');
-        watcherInterval = setInterval(runWatcherCycle, 8000);
+        if (watcherInterval) clearInterval(watcherInterval);
+        watcherInterval = setInterval(runWatcherCycle, 7000);
         runWatcherCycle();
     } else {
-        btn.innerHTML = `<i data-lucide="play" class="w-4 h-4"></i><span>মনিটরিং চালু করুন</span>`;
-        btn.classList.remove('from-rose-600', 'to-red-600');
-        btn.classList.add('from-emerald-600', 'to-teal-600');
-        badge.classList.add('hidden');
-        statusText.textContent = 'অফলাইন';
-        statusText.classList.remove('text-emerald-400');
-        statusText.classList.add('text-slate-300');
-        indicator.classList.remove('pulse-radar', 'bg-emerald-500/20', 'text-emerald-400');
+        if (btn) {
+            btn.innerHTML = `<i data-lucide="play" class="w-4 h-4"></i><span>মনিটরিং চালু করুন</span>`;
+            btn.classList.remove('from-rose-600', 'to-red-600', 'hover:from-rose-500', 'hover:to-red-500');
+            btn.classList.add('from-emerald-600', 'to-teal-600', 'hover:from-emerald-500', 'hover:to-teal-500');
+        }
+        if (badge) badge.classList.add('hidden');
+        if (statusText) {
+            statusText.textContent = 'অফলাইন';
+            statusText.classList.remove('text-emerald-400');
+            statusText.classList.add('text-slate-300');
+        }
+        if (indicator) {
+            indicator.classList.remove('pulse-radar', 'bg-emerald-500/20', 'text-emerald-400');
+            indicator.classList.add('bg-slate-800', 'text-slate-400');
+        }
 
         if (watcherInterval) clearInterval(watcherInterval);
         logWatcher('🔴 লাইভ সিট মনিটরিং স্থগিত করা হয়েছে।');
@@ -1904,33 +1936,53 @@ function toggleWatcherEngine() {
 
 async function runWatcherCycle() {
     scanCount++;
-    document.getElementById('radar-scans-count').textContent = `${scanCount} বার`;
+    const scansEl = document.getElementById('radar-scans-count');
+    if (scansEl) scansEl.textContent = `${scanCount} বার`;
 
-    const origin = document.getElementById('origin-select').value;
-    const dest = document.getElementById('destination-select').value;
-    const date = document.getElementById('journey-date').value;
+    // Watcher specific inputs or fallback to search inputs or defaults
+    const originEl = document.getElementById('watcher-origin-select') || document.getElementById('origin-select');
+    const destEl = document.getElementById('watcher-destination-select') || document.getElementById('destination-select');
+    const dateEl = document.getElementById('watcher-journey-date') || document.getElementById('journey-date');
 
-    logWatcher(`[${new Date().toLocaleTimeString()}] স্ক্যানিং: ${origin} ➔ ${dest} (${date})...`);
+    const origin = (originEl && originEl.value) ? originEl.value.trim() : 'Dhaka';
+    const dest = (destEl && destEl.value) ? destEl.value.trim() : 'Chittagong';
+    let date = (dateEl && dateEl.value) ? dateEl.value.trim() : '';
+    if (!date) {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        date = `${yyyy}-${mm}-${dd}`;
+    }
+
+    logWatcher(`[${new Date().toLocaleTimeString('en-US')}] স্ক্যানিং: ${origin} ➔ ${dest} (${date})...`);
 
     try {
         const res = await fetch(`/api/search?from=${encodeURIComponent(origin)}&to=${encodeURIComponent(dest)}&date=${encodeURIComponent(date)}`);
         const data = await res.json();
 
-        if (data.trains) {
-            let found = false;
+        if (data.trains && data.trains.length > 0) {
+            let foundAny = false;
+            let totalAvailableAcrossFleet = 0;
             data.trains.forEach(t => {
                 if (t.total_available > 0) {
-                    found = true;
-                    alertCount += t.total_available;
-                    document.getElementById('radar-alerts-count').textContent = `${alertCount} টি সিট পাওয়া গেছে`;
-                    playRailwayChime();
-                    logWatcher(`🚨 সিট পাওয়া গেছে! [${t.number}] ${t.name_bn} তে ${t.total_available}টি সিট খালি!`);
-                    showToast(`🚨 [${t.number}] ${t.name_bn}: ${t.total_available} টি সিট খালি পাওয়া গেছে!`, 'alert');
+                    foundAny = true;
+                    totalAvailableAcrossFleet += t.total_available;
+                    logWatcher(`🚨 [${t.number}] ${t.name_bn}: ${t.total_available}টি আসন পাওয়া গেছে!`);
                 }
             });
-            if (!found) {
-                logWatcher(`[${new Date().toLocaleTimeString()}] কোনো ক্যানসেল সিট পাওয়া যায়নি। পরবর্তী স্ক্যান অপেক্ষমান...`);
+
+            if (foundAny) {
+                alertCount += totalAvailableAcrossFleet;
+                const alertsEl = document.getElementById('radar-alerts-count');
+                if (alertsEl) alertsEl.textContent = `${alertCount} টি সিট পাওয়া গেছে`;
+                playRailwayChime();
+                showToast(`🚨 সিট হান্টার: ${totalAvailableAcrossFleet} টি সিট খালি পাওয়া গেছে!`, 'success');
+            } else {
+                logWatcher(`[${new Date().toLocaleTimeString('en-US')}] কোনো সিট খালি পাওয়া যায়নি। পরবর্তী স্ক্যান অপেক্ষমাণ...`);
             }
+        } else {
+            logWatcher(`[${new Date().toLocaleTimeString('en-US')}] ${origin} ➔ ${dest} রুটে ট্রেন খোঁজা হচ্ছে...`);
         }
     } catch (e) {
         logWatcher(`⚠️ নেটওয়ার্ক এরর: ${e.message}`);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>রেল সেবা প্রো | বাংলাদেশ রেলওয়ে লাইভ ট্র্যাকার ও টিকেট অ্যালার্ট</title>
+  <title>BD Rail Seba Pro | বাংলাদেশ রেলওয়ে লাইভ ট্র্যাকিং, ৩ডি ম্যাপ ও ট্রেন ক্রসিং সিস্টেম</title>
   
   <!-- Tailwind CSS & Lucide Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -145,6 +145,13 @@
       background: rgba(15, 23, 42, 0.95);
       box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
     }
+    @media (max-width: 640px) {
+      .nav-clock-pill {
+        padding: 0.22rem 0.5rem;
+        font-size: 0.72rem;
+        gap: 0.25rem;
+      }
+    }
     .mobile-nav-drawer {
       display: none;
       background: rgba(10, 14, 23, 0.98);
@@ -233,12 +240,12 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
         
-        <!-- Brand & Logo (Result Engine Style: 🚆 Rail Seba Pro ● LIVE) -->
-        <div class="nav-brand flex items-center gap-2.5 cursor-pointer" onclick="switchTab('map')">
-          <span class="nav-brand-logo text-2xl">🚆</span>
+        <!-- Brand & Logo (Result Engine Style: 🚆 BD Rail Seba Pro ● LIVE) -->
+        <div class="nav-brand flex items-center gap-2 cursor-pointer" onclick="switchTab('map')">
+          <span class="nav-brand-logo text-xl sm:text-2xl">🚆</span>
           <div class="flex items-center">
-            <span class="nav-brand-text text-lg sm:text-xl font-extrabold tracking-tight text-white font-sans">Rail Seba Pro</span>
-            <span style="font-size:0.7rem; color:#10b981; font-weight:700; margin-left:0.45rem; padding:0.12rem 0.5rem; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); border-radius:9999px;">● LIVE</span>
+            <span class="nav-brand-text text-base sm:text-xl font-extrabold tracking-tight text-white font-sans">BD Rail Seba Pro</span>
+            <span style="font-size:0.68rem; color:#10b981; font-weight:700; margin-left:0.35rem; padding:0.1rem 0.45rem; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); border-radius:9999px;">● LIVE</span>
           </div>
         </div>
 
@@ -246,7 +253,7 @@
         <nav class="nav-links-desktop hidden lg:flex items-center gap-1.5">
           <button onclick="switchTab('map')" id="tab-btn-map" class="nav-tab px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 bg-emerald-600 text-white shadow-md">
             <i data-lucide="map" class="w-3.5 h-3.5 text-emerald-300"></i>
-            <span>লাইভ ম্যাপ</span>
+            <span>ট্রেনের লাইভ লোকেশন</span>
             <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
           </button>
           <button onclick="switchTab('station_tickets')" id="tab-btn-station_tickets" class="nav-tab px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
@@ -271,11 +278,11 @@
           </button>
         </nav>
 
-        <!-- Right Side: Live Clock, Telegram Creator & Hamburger -->
-        <div class="flex items-center gap-2">
-          <!-- Live Clock Pill -->
-          <div class="nav-clock-pill hidden sm:inline-flex" title="বাংলাদেশ লাইভ সময়">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <!-- Right Side: Live Clock, Telegram Creator & Hamburger (Clock visible on mobile right beside hamburger!) -->
+        <div class="flex items-center gap-1.5 sm:gap-2">
+          <!-- Live Clock Pill (Visible on both Mobile & Desktop next to menu!) -->
+          <div class="nav-clock-pill flex items-center" title="বাংলাদেশ লাইভ সময়">
+            <span class="live-dot" style="width:6px; height:6px;"></span>
             <span id="nav-live-clock">--:--:-- --</span>
           </div>
 
@@ -305,7 +312,7 @@
       <button type="button" onclick="switchTab('map'); closeMobileNav();" class="w-full text-left p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-white flex items-center justify-between transition">
         <span class="flex items-center gap-2">
           <i data-lucide="map" class="w-4 h-4 text-emerald-400"></i>
-          <span>🗺️ লাইভ ম্যাপ ট্র্যাকার (৩ডি ক্যামেরা ও ক্রসিং অ্যালার্ট)</span>
+          <span>🗺️ ট্রেনের লাইভ লোকেশন (৩ডি স্যাটেলাইট ও ক্রসিং রাডার)</span>
         </span>
         <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
       </button>
@@ -522,8 +529,8 @@
         <div id="map-crossing-hud" class="hidden md:block absolute top-4 left-4 z-30 max-w-sm sm:max-w-md bg-slate-950/95 backdrop-blur-md p-3.5 rounded-2xl border-2 border-amber-500/60 text-xs text-white shadow-2xl space-y-2.5 transition-all">
           <div class="flex items-center justify-between gap-2 border-b border-amber-500/30 pb-2">
             <div class="flex items-center gap-1.5 font-bold text-amber-300">
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
-              <span class="text-sm">⚠️ রেল ক্রসিং ও সিগন্যাল অ্যালার্ট</span>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span class="text-sm">🚆 মুখোমুখি ট্রেন ক্রসিং রাডার</span>
             </div>
             <div class="flex items-center gap-1.5">
               <span id="crossing-hud-station" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40 text-[10px] font-bold">সৈয়দপুর জংশন</span>
@@ -583,9 +590,9 @@
         </div>
 
         <!-- Floating Reopen Button when Crossing HUD is closed (Always sleek and compact on mobile!) -->
-        <button id="btn-reopen-crossing-hud" onclick="openCrossingHUD()" class="absolute top-2 left-2 md:top-4 md:left-4 z-20 px-2.5 py-1.5 rounded-xl bg-slate-950/90 border border-amber-500/60 text-amber-300 hover:text-white hover:bg-amber-600/30 text-[11px] md:text-xs font-bold shadow-xl flex items-center gap-1.5 backdrop-blur-md transition active:scale-95">
-          <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-          <span>⚠️ ক্রসিং অ্যালার্ট</span>
+        <button id="btn-reopen-crossing-hud" onclick="openCrossingHUD()" class="absolute top-2 left-2 md:top-4 md:left-4 z-20 px-2.5 py-1.5 rounded-xl bg-slate-950/90 border border-emerald-500/60 text-emerald-300 hover:text-white hover:bg-emerald-600/30 text-[11px] md:text-xs font-bold shadow-xl flex items-center gap-1.5 backdrop-blur-md transition active:scale-95">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span>🚆 মুখোমুখি ক্রসিং রাডার</span>
         </button>
 
         <!-- Floating Live Train Tracking Area & Track Zoom HUD (Ultra sleek on mobile!) -->
@@ -1460,14 +1467,46 @@
           </div>
 
           <div class="flex items-center gap-3">
-            <button id="toggle-watcher-btn" onclick="toggleWatcherEngine()" class="px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white">
+            <span id="badge-watching" class="hidden text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold animate-pulse">
+              ● লাইভ রাডার স্ক্যানিং
+            </span>
+            <button id="toggle-watcher-btn" onclick="toggleWatcherEngine()" class="px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white cursor-pointer active:scale-95">
               <i data-lucide="play" class="w-4 h-4"></i>
               <span>মনিটরিং চালু করুন</span>
             </button>
-            <button onclick="testChime()" title="সাউন্ড অ্যালার্ম টেস্ট করুন" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-sm flex items-center gap-1.5 transition">
+            <button onclick="testChime()" title="সাউন্ড অ্যালার্ম টেস্ট করুন" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-sm flex items-center gap-1.5 transition cursor-pointer">
               <i data-lucide="volume-2" class="w-4 h-4 text-amber-400"></i>
               <span>টেস্ট বেল</span>
             </button>
+          </div>
+        </div>
+
+        <!-- Watcher Target Route & Date Controls -->
+        <div class="mt-6 p-4 rounded-xl bg-slate-900/90 border border-emerald-500/30 shadow-lg space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+              <i data-lucide="crosshair" class="w-4 h-4"></i>
+              <span>সিট হান্টারের জন্য স্টেশন ও যাত্রার তারিখ নির্বাচন করুন</span>
+            </span>
+            <span class="text-[11px] text-slate-400">অটোমেটিক প্রতি ৭ সেকেন্ডে লাইভ চেক হবে</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">প্রারম্ভিক স্টেশন (From)</label>
+              <select id="watcher-origin-select" class="w-full bg-slate-950 text-white text-xs sm:text-sm font-semibold rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 shadow-inner">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">গন্তব্য স্টেশন (To)</label>
+              <select id="watcher-destination-select" class="w-full bg-slate-950 text-white text-xs sm:text-sm font-semibold rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 shadow-inner">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">যাত্রার তারিখ (Date)</label>
+              <input type="date" id="watcher-journey-date" class="w-full bg-slate-950 text-white text-xs sm:text-sm font-semibold rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 shadow-inner">
+            </div>
           </div>
         </div>
 
@@ -1594,29 +1633,167 @@
             </ul>
           </div>
 
-          <!-- Card 2: Emergency Helpline -->
+          <!-- Card 2: Emergency Helpline & Instant Call Directory -->
           <div class="bg-slate-900/80 p-5 rounded-xl border border-slate-800">
-            <div class="flex items-center gap-2 text-emerald-400 font-bold text-base mb-2">
+            <div class="flex items-center gap-2 text-emerald-400 font-bold text-base mb-3">
               <i data-lucide="phone-call" class="w-5 h-5"></i>
-              <span>জরুরি যোগাযোগ ও হেল্পলাইন</span>
+              <span>জরুরি হেল্পলাইন ও হটলাইন (১-ক্লিকে সরাসরি কল)</span>
             </div>
             <div class="space-y-2 text-xs text-slate-300">
-              <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950">
-                <span>ট্রেন ট্র্যাকিং এসএমএস (TTMS):</span>
-                <span class="font-bold text-emerald-400">16318</span>
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                <div>
+                  <div class="font-bold text-white">বাংলাদেশ রেলওয়ে তথ্য ও কল সেন্টার</div>
+                  <div class="text-[10px] text-slate-400">ট্রেনের সময়সূচি ও সাধারণ তথ্যের জন্য</div>
+                </div>
+                <a href="tel:131" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 transition shadow">
+                  <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+                  <span>131 কল</span>
+                </a>
               </div>
-              <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950">
-                <span>রেলওয়ে পুলিশ কন্ট্রোল রুম (GRP):</span>
-                <span class="font-bold text-emerald-400">01711-692999</span>
+
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                <div>
+                  <div class="font-bold text-white">Shohoz eticket হেল্পডেস্ক</div>
+                  <div class="text-[10px] text-slate-400">অনলাইন টিকিট কাটা ও রিফান্ড সংক্রান্ত</div>
+                </div>
+                <a href="tel:16374" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-1 transition shadow">
+                  <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+                  <span>16374 কল</span>
+                </a>
               </div>
-              <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950">
-                <span>জাতীয় জরুরি সেবা:</span>
-                <span class="font-bold text-rose-400">999</span>
+
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                <div>
+                  <div class="font-bold text-white">রেলওয়ে পুলিশ কন্ট্রোল রুম (GRP)</div>
+                  <div class="text-[10px] text-slate-400">ট্রেনে নিরাপত্তা, চুরি বা যেকোনো অনাকাঙ্ক্ষিত ঘটনায়</div>
+                </div>
+                <a href="tel:01711692999" class="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1 transition shadow">
+                  <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+                  <span>01711-692999</span>
+                </a>
               </div>
-              <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950">
-                <span>Shohoz e-Ticket হেল্পডেস্ক:</span>
-                <span class="font-bold text-amber-400">16374 / support@shohoz.com</span>
+
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                <div>
+                  <div class="font-bold text-white">জাতীয় জরুরি সেবা (৯৯৯)</div>
+                  <div class="text-[10px] text-slate-400">পুলিশ, অ্যাম্বুলেন্স ও ফায়ার সার্ভিস (টোল ফ্রি)</div>
+                </div>
+                <a href="tel:999" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1 transition shadow">
+                  <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+                  <span>999 কল</span>
+                </a>
               </div>
+
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                <div>
+                  <div class="font-bold text-white">নারী ও শিশু নির্যাতন প্রতিরোধ সেল</div>
+                  <div class="text-[10px] text-slate-400">টোল ফ্রি হেল্পলাইন ২৪/৭ সক্রিয়</div>
+                </div>
+                <a href="tel:109" class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1 transition shadow">
+                  <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+                  <span>109 কল</span>
+                </a>
+              </div>
+
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                <div>
+                  <div class="font-bold text-white">অফিসিয়াল TTMS এসএমএস ট্র্যাকিং</div>
+                  <div class="text-[10px] text-slate-400">মেসেজ ফরম্যাট: TR <স্পেস> ট্রেনের নম্বর</div>
+                </div>
+                <a href="sms:16318?body=TR" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-1 transition shadow">
+                  <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                  <span>16318 এসএমএস</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Station Master Control Room Directory -->
+        <div class="mt-6 bg-slate-900/80 p-5 rounded-xl border border-slate-800">
+          <h4 class="font-bold text-sm text-white mb-3 flex items-center gap-2">
+            <i data-lucide="building-2" class="w-4 h-4 text-cyan-400"></i>
+            <span>প্রধান রেলওয়ে স্টেশন মাস্টার ও কন্ট্রোল রুম সরাসরি যোগাযোগ</span>
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">ঢাকা (কমলাপুর)</div>
+                <div class="text-[10px] text-slate-400 font-mono">01711-691550</div>
+              </div>
+              <a href="tel:01711691550" class="p-2 rounded-lg bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600 hover:text-white transition">
+                <i data-lucide="phone" class="w-4 h-4"></i>
+              </a>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">ঢাকা বিমানবন্দর</div>
+                <div class="text-[10px] text-slate-400 font-mono">01711-691551</div>
+              </div>
+              <a href="tel:01711691551" class="p-2 rounded-lg bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600 hover:text-white transition">
+                <i data-lucide="phone" class="w-4 h-4"></i>
+              </a>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">চট্টগ্রাম জংশন</div>
+                <div class="text-[10px] text-slate-400 font-mono">01711-691553</div>
+              </div>
+              <a href="tel:01711691553" class="p-2 rounded-lg bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600 hover:text-white transition">
+                <i data-lucide="phone" class="w-4 h-4"></i>
+              </a>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">রাজশাহী স্টেশন</div>
+                <div class="text-[10px] text-slate-400 font-mono">01711-691554</div>
+              </div>
+              <a href="tel:01711691554" class="p-2 rounded-lg bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600 hover:text-white transition">
+                <i data-lucide="phone" class="w-4 h-4"></i>
+              </a>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">পার্বতীপুর জংশন</div>
+                <div class="text-[10px] text-slate-400 font-mono">01711-691555</div>
+              </div>
+              <a href="tel:01711691555" class="p-2 rounded-lg bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600 hover:text-white transition">
+                <i data-lucide="phone" class="w-4 h-4"></i>
+              </a>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">দিনাজপুর স্টেশন</div>
+                <div class="text-[10px] text-slate-400 font-mono">01711-691556</div>
+              </div>
+              <a href="tel:01711691556" class="p-2 rounded-lg bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600 hover:text-white transition">
+                <i data-lucide="phone" class="w-4 h-4"></i>
+              </a>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">সিলেট স্টেশন</div>
+                <div class="text-[10px] text-slate-400 font-mono">01711-691557</div>
+              </div>
+              <a href="tel:01711691557" class="p-2 rounded-lg bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600 hover:text-white transition">
+                <i data-lucide="phone" class="w-4 h-4"></i>
+              </a>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-white">খুলনা স্টেশন</div>
+                <div class="text-[10px] text-slate-400 font-mono">01711-691558</div>
+              </div>
+              <a href="tel:01711691558" class="p-2 rounded-lg bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600 hover:text-white transition">
+                <i data-lucide="phone" class="w-4 h-4"></i>
+              </a>
             </div>
           </div>
         </div>
@@ -1655,7 +1832,7 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 max-w-sm"></div>
 
   <!-- App Logic -->
-  <script src="/app.js?v=20261103_train_brand_v4"></script>
+  <script src="/app.js?v=20261103_all_features_v5"></script>
 </body>
 </html>
 

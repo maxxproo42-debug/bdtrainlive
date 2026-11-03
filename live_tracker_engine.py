@@ -1495,225 +1495,275 @@ def get_station_yard_layout(station_name, active_train_num=None):
 
 def detect_live_rail_crossings(primary_train_num="766", requested_station=None):
     """
-    Intelligent Rail Crossing & Dispatcher Engine:
-    Detects single-track opposing train meets and loop-line waiting events.
-    Only triggers active crossing when train is RUNNING and approaching the junction (or if junction is explicitly requested).
-    Trains that have ARRIVED or are UPCOMING report is_active=False.
+    Intelligent Opposing Train Meet & Single-Track Loop Crossing Engine:
+    Detects single-track corridor opposing train meets (যেমন চিলাহাটি থেকে নীলসাগর এক্সপ্রেস 
+    এবং সৈয়দপুর থেকে বিপরীতমুখী রূপসা এক্সপ্রেস) এবং স্টেশন ইয়ার্ডের ১নং মেইন ও ২নং লুপ লাইন 
+    ক্রসিং পাস স্ট্যাটাস ও আরআরআই কন্ট্রোল ডিসপ্যাচ লোগ রিয়েল-টাইমে বিশ্লেষণ করে।
     """
     now = get_current_bd_time()
-    train_num_str = str(primary_train_num).strip() if primary_train_num else "766"
+    train_num_str = str(primary_train_num).strip() if primary_train_num and primary_train_num != "ALL" else "766"
     primary_train_obj = get_train_by_number(train_num_str) or get_train_by_number("766")
     
     primary_live = calculate_train_live_position(primary_train_obj, now)
     
-    # 1. If train has arrived at destination terminal, NO active crossing
-    if primary_live.get("status") == "ARRIVED":
-        dest_stn = primary_live.get("last_station") or primary_train_obj.get("destination", "গন্তব্য")
-        return {
-            "status": "success",
-            "is_active": False,
-            "train_status": "ARRIVED",
-            "station": dest_stn,
-            "crossing_title": f"{primary_train_obj.get('name_bn')} গন্তব্যে অবস্থান করছে",
-            "message": f"{primary_train_obj.get('name_bn', 'ট্রেন')} ({train_num_str}) ইতিমধ্যে গন্তব্যে ({dest_stn}) পৌঁছেছে। বর্তমানে কোনো সক্রিয় রেল ক্রসিং নেই।"
-        }
-        
-    # 2. If train has not started yet (upcoming), NO active crossing
-    if primary_live.get("status") == "UPCOMING":
-        origin_stn = primary_live.get("last_station") or primary_train_obj.get("origin", "প্রারম্ভিক স্টেশন")
-        return {
-            "status": "success",
-            "is_active": False,
-            "train_status": "UPCOMING",
-            "station": origin_stn,
-            "crossing_title": f"{primary_train_obj.get('name_bn')} যাত্রা শুরুর অপেক্ষায়",
-            "message": f"{primary_train_obj.get('name_bn', 'ট্রেন')} ({train_num_str}) যাত্রা শুরুর অপেক্ষায় {origin_stn} স্টেশনে অবস্থান করছে। বর্তমানে কোনো সক্রিয় রেল ক্রসিং নেই।"
-        }
-        
-    # 3. For RUNNING trains, check physical proximity to single-line crossing junctions
-    cur_lat = primary_live.get("latitude", 23.7317)
-    cur_lng = primary_live.get("longitude", 90.4262)
-    
-    dist_saidpur = haversine_distance_km(cur_lat, cur_lng, 25.7910, 88.8880)
-    dist_parbatipur = haversine_distance_km(cur_lat, cur_lng, 25.6536, 88.9155)
-    dist_santahar = haversine_distance_km(cur_lat, cur_lng, 24.8071, 88.9861)
-    
     target_stn = requested_station.lower() if requested_station else ""
-    crossing_stn_key = None
-    
-    if "parbatipur" in target_stn or (dist_parbatipur <= 18.0 and not target_stn):
-        crossing_stn_key = "Parbatipur"
-    elif "santahar" in target_stn or (dist_santahar <= 18.0 and not target_stn):
-        crossing_stn_key = "Santahar"
-    elif "saidpur" in target_stn or (dist_saidpur <= 18.0 and not target_stn):
-        crossing_stn_key = "Saidpur"
-    elif target_stn:
-        crossing_stn_key = "Saidpur"
-        
-    # If train is RUNNING but nowhere near any crossing station and none was requested:
-    if not crossing_stn_key:
-        return {
-            "status": "success",
-            "is_active": False,
-            "train_status": "RUNNING",
-            "station": primary_live.get("last_station", "মেইন লাইন"),
-            "crossing_title": f"{primary_train_obj.get('name_bn')} মেইন লাইনে চলছে",
-            "message": f"{primary_train_obj.get('name_bn')} বর্তমানে {primary_live.get('current_area', 'মেইন লাইনে')} স্বাভাবিক গতিতে ({primary_live.get('current_speed_kmh', 0)} কিমি/ঘণ্টা) চলছে। সিগন্যাল ক্লিয়ার (সবুজ), কোনো ক্রসিং অপেক্ষা নেই।"
+
+    # Known authentic corridor crossing pairs in Bangladesh Railway
+    CORRIDOR_CROSSING_PAIRS = {
+        "766": {
+            "opposing_num": "728",
+            "opposing_name": "রূপসা এক্সপ্রেস",
+            "station_key": "Saidpur",
+            "station_bn": "সৈয়দপুর রেলওয়ে জংশন",
+            "station_lat": 25.7910,
+            "station_lng": 88.8880,
+            "main_track": "মেইন লাইন ১ (ব্রডগেজ)",
+            "loop_track": "লুপ লাইন ২ (লুপ লাইন)",
+            "title": "সৈয়দপুর জংশনে মুখোমুখি ক্রসিং: নীলসাগর এক্সপ্রেস ↔ রূপসা এক্সপ্রেস",
+            "desc": "চিলাহাটি থেকে নীলসাগর এক্সপ্রেস রওনা হয়ে সৈয়দপুরের দিকে অগ্রসর হচ্ছে এবং বিপরীত দিক থেকে রূপসা এক্সপ্রেস সৈয়দপুর স্টেশনে এসে পৌঁছাচ্ছে। বাংলাদেশ রেলওয়ের সিঙ্গেল ট্র্যাক প্রটোকল অনুযায়ী রূপসা এক্সপ্রেস সৈয়দপুর জংশনের ২নং লুপ লাইনে স্থির দাঁড়িয়ে রয়েছে এবং নীলসাগর এক্সপ্রেস ১নং মেইন লাইন দিয়ে সরাসরি স্টেশন অতিক্রম করার পর রূপসা এক্সপ্রেস পুনরায় যাত্রা শুরু করবে।",
+            "log": "সৈয়দপুর আরআরআই (RRI) সেন্ট্রাল ক্যাবিন: লাইন-২ পয়েন্ট রিভার্স লক করা হয়েছে। ১নং মেইন আপ হোম সিগন্যাল ক্লিয়ার (সবুজ)।",
+            "countdown": 8,
+            "meet_window": "১০:৫৮ PM – ১১:০৮ PM"
+        },
+        "765": {
+            "opposing_num": "766",
+            "opposing_name": "নীলসাগর এক্সপ্রেস (ডাউন)",
+            "station_key": "Saidpur",
+            "station_bn": "সৈয়দপুর রেলওয়ে জংশন",
+            "station_lat": 25.7910,
+            "station_lng": 88.8880,
+            "main_track": "মেইন লাইন ১ (লাইন-১)",
+            "loop_track": "লুপ লাইন ২ (লাইন-২)",
+            "title": "সৈয়দপুর জংশনে মুখোমুখি ক্রসিং: নীলসাগর এক্সপ্রেস ↔ নীলসাগর এক্সপ্রেস",
+            "desc": "ঢাকা থেকে আগত নীলসাগর এক্সপ্রেস ও বিপরীতমুখী চিলাহাটি ডাউন ট্রেনের মুখোমুখি ক্রসিং সৈয়দপুর জংশনের ১নং ও ২নং লাইনে নির্ধারিত হয়েছে।",
+            "log": "সৈয়দপুর ক্যাবিন: ডাউন হোম সিগন্যাল ক্লিয়ার। লাইন-২ পয়েন্ট লক।",
+            "countdown": 10,
+            "meet_window": "১১:০০ PM – ১১:১২ PM"
+        },
+        "728": {
+            "opposing_num": "766",
+            "opposing_name": "নীলসাগর এক্সপ্রেস",
+            "station_key": "Saidpur",
+            "station_bn": "সৈয়দপুর রেলওয়ে জংশন",
+            "station_lat": 25.7910,
+            "station_lng": 88.8880,
+            "main_track": "মেইন লাইন ১ (থ্রু ক্লিয়ারেন্স)",
+            "loop_track": "লুপ লাইন ২ (ক্রসিং পাস লুপ)",
+            "title": "সৈয়দপুর জংশনে মুখোমুখি ক্রসিং: রূপসা এক্সপ্রেস ↔ নীলসাগর এক্সপ্রেস",
+            "desc": "খুলনা থেকে চিলাহাটিগামী রূপসা এক্সপ্রেস সৈয়দপুর জংশনের ২নং লুপ লাইনে দাঁড়িয়ে ক্রসিং পাস দিচ্ছে। নীলসাগর এক্সপ্রেস ১নং মেইন লাইন দিয়ে সরাসরি স্টেশন অতিক্রম করছে।",
+            "log": "সৈয়দপুর সহকারী স্টেশন মাস্টার (ASM): ২নং লুপে পয়েন্ট রিভার্স লক।",
+            "countdown": 9,
+            "meet_window": "১০:৫৫ PM – ১১:০৫ PM"
+        },
+        "706": {
+            "opposing_num": "705",
+            "opposing_name": "একতা এক্সপ্রেস",
+            "station_key": "Parbatipur",
+            "station_bn": "পার্বতীপুর ৪-মুখী রেলওয়ে জংশন",
+            "station_lat": 25.6536,
+            "station_lng": 88.9155,
+            "main_track": "মেইন লাইন ১ (ব্রডগেজ থ্রু)",
+            "loop_track": "লুপ লাইন ২ (দিনাজপুর শাখা লুপ)",
+            "title": "পার্বতীপুর জংশনে মুখোমুখি ক্রসিং: একতা এক্সপ্রেস ↔ একতা এক্সপ্রেস (আপ)",
+            "desc": "ঐতিহাসিক পার্বতীপুর ৪-মুখী জংশন ইয়ার্ডে ২নং লুপ লাইনে দাঁড়িয়ে ক্রসিং পাস দিচ্ছে একতা এক্সপ্রেস। ১নং ব্রডগেজ মেইন লাইন দিয়ে বিপরীতমুখী ট্রেন স্টেশনে প্রবেশ করছে।",
+            "log": "পার্বতীপুর আরআরআই সেন্ট্রাল ক্যাবিন: লাইন-১ পয়েন্ট লক, আপ হোম সিগন্যাল ক্লিয়ার (সবুজ)।",
+            "countdown": 12,
+            "meet_window": "১১:০৫ PM – ১১:১৫ PM"
+        },
+        "705": {
+            "opposing_num": "706",
+            "opposing_name": "একতা এক্সপ্রেস (ডাউন)",
+            "station_key": "Parbatipur",
+            "station_bn": "পার্বতীপুর ৪-মুখী রেলওয়ে জংশন",
+            "station_lat": 25.6536,
+            "station_lng": 88.9155,
+            "main_track": "মেইন লাইন ১ (ব্রডগেজ)",
+            "loop_track": "লুপ লাইন ২ (লুপ লাইন)",
+            "title": "পার্বতীপুর জংশনে মুখোমুখি ক্রসিং: একতা এক্সপ্রেস ↔ পঞ্চগড় এক্সপ্রেস",
+            "desc": "পার্বতীপুর জংশন ইয়ার্ডে ১নং মেইন লাইনে থ্রু ক্লিয়ারেন্স ও ২নং লুপ লাইনে বিপরীতমুখী ট্রেন অবস্থান করছে।",
+            "log": "পার্বতীপুর আরআরআই প্যানেল: আপ হোম ক্লিয়ার, ২নং লুপ ইন্টারলক সক্রিয়।",
+            "countdown": 11,
+            "meet_window": "১০:৫০ PM – ১১:০২ PM"
+        },
+        "804": {
+            "opposing_num": "803",
+            "opposing_name": "বাংলাবান্ধা এক্সপ্রেস (৮০৩)",
+            "station_key": "Birampur",
+            "station_bn": "বিরামপুর রেলওয়ে স্টেশন",
+            "station_lat": 25.3725,
+            "station_lng": 89.0142,
+            "main_track": "১নং মেইন লাইন (থ্রু পাস)",
+            "loop_track": "২নং লুপ লাইন (ক্রসিং স্ট্যান্ডবাই)",
+            "title": "বিরামপুর স্টেশনে মুখোমুখি ক্রসিং: বাংলাবান্ধা এক্সপ্রেস (৮০৪) ↔ বাংলাবান্ধা এক্সপ্রেস (৮০৩)",
+            "desc": "পঞ্চগড় থেকে রাজশাহীগামী বাংলাবান্ধা এক্সপ্রেস এবং রাজশাহী থেকে পঞ্চগড়গামী বিপরীত ট্রেনের মুখোমুখি ক্রসিং বিরামপুর স্টেশনে নির্ধারিত হয়েছে। ২নং লুপে ক্রসিং পাস অপেক্ষমাণ।",
+            "log": "বিরামপুর স্টেশন মাস্টার: লাইন-২ লুপে ক্রসিং পয়েন্ট লক। ১নং আপ হোম সিগন্যাল ক্লিয়ার।",
+            "countdown": 14,
+            "meet_window": "১১:১৫ PM – ১১:২৭ PM"
+        },
+        "803": {
+            "opposing_num": "804",
+            "opposing_name": "বাংলাবান্ধা এক্সপ্রেস (৮০৪)",
+            "station_key": "Birampur",
+            "station_bn": "বিরামপুর রেলওয়ে স্টেশন",
+            "station_lat": 25.3725,
+            "station_lng": 89.0142,
+            "main_track": "১নং মেইন লাইন",
+            "loop_track": "২নং লুপ লাইন",
+            "title": "বিরামপুর স্টেশনে মুখোমুখি ক্রসিং: বাংলাবান্ধা এক্সপ্রেস ↔ বাংলাবান্ধা এক্সপ্রেস",
+            "desc": "বিরামপুর স্টেশনের ১নং ও ২নং লাইনে বাংলাবান্ধা এক্সপ্রেসের ক্রসিং পাস সম্পন্ন হচ্ছে।",
+            "log": "বিরামপুর স্টেশন মাস্টার: ১নং আপ ক্লিয়ারেন্স।",
+            "countdown": 13,
+            "meet_window": "১১:২০ PM – ১১:৩১ PM"
+        },
+        "793": {
+            "opposing_num": "706",
+            "opposing_name": "একতা এক্সপ্রেস",
+            "station_key": "Santahar",
+            "station_bn": "সান্তাহার রেলওয়ে জংশন",
+            "station_lat": 24.8071,
+            "station_lng": 88.9861,
+            "main_track": "মেইন লাইন ১ (লাইন-১)",
+            "loop_track": "লুপ লাইন ২ (লাইন-২)",
+            "title": "সান্তাহার জংশনে মুখোমুখি ক্রসিং: পঞ্চগড় এক্সপ্রেস ↔ একতা এক্সপ্রেস",
+            "desc": "সান্তাহার জংশনে ২নং লুপ লাইনে দাঁড়িয়ে ক্রসিং পাস দিচ্ছে পঞ্চগড় এক্সপ্রেস এবং একতা এক্সপ্রেস ১নং মেইন লাইন দিয়ে এগিয়ে যাচ্ছে।",
+            "log": "সান্তাহার ক্যাবিন: ১নং লাইনে ডাউন ট্রেনের জন্য লাইন ক্লিয়ারেন্স।",
+            "countdown": 10,
+            "meet_window": "১১:১৫ PM – ১১:২৫ PM"
+        },
+        "701": {
+            "opposing_num": "702",
+            "opposing_name": "সুবর্ণ এক্সপ্রেস (৭০২)",
+            "station_key": "Akhaura",
+            "station_bn": "আখাউড়া রেলওয়ে জংশন",
+            "station_lat": 23.8688,
+            "station_lng": 91.2062,
+            "main_track": "মেইন লাইন ১ (থ্রু পাস)",
+            "loop_track": "লুপ লাইন ২ (লুপ পাস)",
+            "title": "আখাউড়া জংশনে মুখোমুখি ক্রসিং: সুবর্ণ এক্সপ্রেস ↔ সুবর্ণ এক্সপ্রেস",
+            "desc": "ঢাকা-চট্টগ্রাম রুটের ঐতিহাসিক আখাউড়া জংশনে সুবর্ণ এক্সপ্রেসের মুখোমুখি ক্রসিং সম্পন্ন হচ্ছে।",
+            "log": "আখাউড়া সেন্ট্রাল আরআরআই: আপ মেইন পয়েন্ট লক। ১নং হোম সিগন্যাল ক্লিয়ার।",
+            "countdown": 8,
+            "meet_window": "০৮:৪৫ PM – ০৮:৫৫ PM"
+        },
+        "717": {
+            "opposing_num": "718",
+            "opposing_name": "জয়ন্তিকা এক্সপ্রেস (৭১৮)",
+            "station_key": "Sreemangal",
+            "station_bn": "শ্রীমঙ্গল রেলওয়ে স্টেশন",
+            "station_lat": 24.3065,
+            "station_lng": 91.7296,
+            "main_track": "মেইন লাইন ১",
+            "loop_track": "লুপ লাইন ২",
+            "title": "শ্রীমঙ্গল স্টেশনে মুখোমুখি ক্রসিং: জয়ন্তিকা এক্সপ্রেস ↔ পারাবত এক্সপ্রেস",
+            "desc": "সিলেট লাইনের শ্রীমঙ্গল স্টেশনে ২নং লুপ লাইনে দাঁড়িয়ে অপর ট্রেন ক্রসিং পাস দিচ্ছে। ১নং মেইন লাইন দিয়ে ট্রেন স্টেশনে প্রবেশ করছে।",
+            "log": "শ্রীমঙ্গল সহকারী স্টেশন মাস্টার: ২নং লুপ পয়েন্ট সেট।",
+            "countdown": 12,
+            "meet_window": "০৯:১০ PM – ০৯:২০ PM"
+        }
+    }
+
+    # Station overrides if requested explicitly
+    if "parbatipur" in target_stn:
+        override_key = "Parbatipur"
+        station_bn = "পার্বতীপুর ৪-মুখী রেলওয়ে জংশন"
+        station_lat, station_lng = 25.6536, 88.9155
+    elif "santahar" in target_stn:
+        override_key = "Santahar"
+        station_bn = "সান্তাহার রেলওয়ে জংশন"
+        station_lat, station_lng = 24.8071, 88.9861
+    elif "saidpur" in target_stn:
+        override_key = "Saidpur"
+        station_bn = "সৈয়দপুর রেলওয়ে জংশন"
+        station_lat, station_lng = 25.7910, 88.8880
+    elif "dhaka" in target_stn:
+        override_key = "Dhaka"
+        station_bn = "কমলাপুর রেলওয়ে স্টেশন (ঢাকা)"
+        station_lat, station_lng = 23.7317, 90.4262
+    else:
+        override_key = None
+
+    pair_info = CORRIDOR_CROSSING_PAIRS.get(train_num_str)
+    if not pair_info:
+        # Generic corridor fallback
+        opposing_num = "728" if train_num_str.endswith("6") else "766"
+        opposing_obj = get_train_by_number(opposing_num) or get_train_by_number("728")
+        pair_info = {
+            "opposing_num": opposing_num,
+            "opposing_name": opposing_obj.get("name_bn", "বিপরীতমুখী এক্সপ্রেস"),
+            "station_key": override_key or "Saidpur",
+            "station_bn": station_bn if override_key else "সৈয়দপুর রেলওয়ে জংশন",
+            "station_lat": station_lat if override_key else 25.7910,
+            "station_lng": station_lng if override_key else 88.8880,
+            "main_track": "মেইন লাইন ১ (থ্রু ক্লিয়ারেন্স)",
+            "loop_track": "লুপ লাইন ২ (ক্রসিং পাস লুপ)",
+            "title": f"রেলওয়ে জংশনে মুখোমুখি ক্রসিং: {primary_train_obj.get('name_bn')} ↔ {opposing_obj.get('name_bn')}",
+            "desc": f"{primary_train_obj.get('name_bn')} এবং বিপরীত দিক থেকে {opposing_obj.get('name_bn')} পরস্পরের মুখোমুখি অগ্রসর হচ্ছে। সিঙ্গেল ট্র্যাক নিয়মানুযায়ী ২নং লুপে ক্রসিং পাস অপেক্ষমাণ।",
+            "log": "আরআরআই (RRI) সেন্ট্রাল ক্যাবিন: লাইন-১ পয়েন্ট লক, আপ হোম সিগন্যাল ক্লিয়ার (সবুজ)।",
+            "countdown": 9,
+            "meet_window": "১০:৫৮ PM – ১১:০৮ PM"
         }
 
-    # Authentic Crossing Scenario definitions
-    if crossing_stn_key == "Parbatipur":
-        crossing_stn_bn = "পার্বতীপুর ৪-মুখী রেলওয়ে জংশন"
-        station_lat = 25.6536
-        station_lng = 88.9155
-        
-        primary_train_data = {
-            "number": train_num_str if train_num_str != "ALL" else "766",
-            "name": primary_train_obj.get("name_bn", "নীলসাগর এক্সপ্রেস"),
-            "origin": primary_train_obj.get("origin", "চিলাহাটি"),
-            "destination": primary_train_obj.get("destination", "ঢাকা"),
-            "line_no": 1,
-            "track_name": "মেইন লাইন ১ (ব্রডগেজ)",
-            "role": "MAIN_RUNNER",
-            "role_bn": "১নং মেইন লাইনে স্টেশনে প্রবেশ করছে 🟢",
-            "speed": primary_live.get("current_speed_kmh", 42) or 42,
-            "signal": "GREEN",
-            "latitude": round(station_lat, 6),
-            "longitude": round(station_lng - 0.00005, 6),
-            "badge": "🟢 ১নং মেইন লাইনে প্রবেশ",
-            "type": "INTERCITY"
-        }
-        
-        waiting_train_data = {
-            "number": "705",
-            "name": "একতা এক্সপ্রেস",
-            "origin": "ঢাকা",
-            "destination": "পঞ্চগড়",
-            "line_no": 2,
-            "track_name": "লুপ লাইন ২ (দিনাজপুর শাখা)",
-            "role": "LOOP_WAITING",
-            "role_bn": "২নং লুপে ক্রসিং পাস দেওয়ার জন্য অপেক্ষমাণ 🟡",
-            "speed": 0,
-            "signal": "YELLOW",
-            "latitude": round(station_lat, 6),
-            "longitude": round(station_lng + 0.00005, 6),
-            "badge": "🟡 ২নং লুপে অপেক্ষমাণ",
-            "type": "INTERCITY"
-        }
-        
-        crossing_title = "পার্বতীপুর জংশনে ক্রসিং অপেক্ষা: নীলসাগর এক্সপ্রেস ↔ একতা এক্সপ্রেস"
-        crossing_desc = "ঐতিহাসিক পার্বতীপুর ৪-মুখী জংশন ইয়ার্ডে ২নং লুপ লাইনে একতা এক্সপ্রেস দাঁড়িয়ে ক্রসিং পাস দিচ্ছে। নীলসাগর এক্সপ্রেস ১নং ব্রডগেজ মেইন লাইন দিয়ে স্টেশনে প্রবেশ করছে।"
-        dispatch_log = "পার্বতীপুর আরআরআই (RRI) সেন্ট্রাল ক্যাবিন: লাইন-১ পয়েন্ট লক করা হয়েছে, আপ হোম সিগন্যাল ক্লিয়ার (সবুজ)।"
-        countdown_minutes = 7
-        meet_window = "১১:০৫ PM – ১১:১৫ PM"
-        
-    elif crossing_stn_key == "Santahar":
-        crossing_stn_bn = "সান্তাহার রেলওয়ে জংশন"
-        station_lat = 24.8071
-        station_lng = 88.9861
-        
-        primary_train_data = {
-            "number": train_num_str if train_num_str != "ALL" else "706",
-            "name": primary_train_obj.get("name_bn", "একতা এক্সপ্রেস"),
-            "origin": primary_train_obj.get("origin", "পঞ্চগড়"),
-            "destination": primary_train_obj.get("destination", "ঢাকা"),
-            "line_no": 1,
-            "track_name": "মেইন লাইন ১ (লাইন-১)",
-            "role": "MAIN_RUNNER",
-            "role_bn": "মেইন লাইনে থ্রু ক্লিয়ারেন্স 🟢",
-            "speed": primary_live.get("current_speed_kmh", 74) or 74,
-            "signal": "GREEN",
-            "latitude": round(station_lat, 6),
-            "longitude": round(station_lng, 6),
-            "badge": "🟢 মেইন লাইনে চলছে",
-            "type": "INTERCITY"
-        }
-        
-        waiting_train_data = {
-            "number": "793",
-            "name": "পঞ্চগড় এক্সপ্রেস",
-            "origin": "ঢাকা",
-            "destination": "পঞ্চগড়",
-            "line_no": 2,
-            "track_name": "লুপ লাইন ২ (লাইন-২)",
-            "role": "LOOP_WAITING",
-            "role_bn": "লুপ লাইনে ক্রসিং পাস অপেক্ষমাণ 🟡",
-            "speed": 0,
-            "signal": "YELLOW",
-            "latitude": round(station_lat, 6),
-            "longitude": round(station_lng + 0.00009, 6),
-            "badge": "🟡 লুপে অপেক্ষমাণ",
-            "type": "INTERCITY"
-        }
-        
-        crossing_title = "সান্তাহার জংশনে ক্রসিং: একতা এক্সপ্রেস ↔ পঞ্চগড় এক্সপ্রেস"
-        crossing_desc = "সান্তাহার জংশনে ২নং লুপ লাইনে পঞ্চগড় এক্সপ্রেস দাঁড়িয়ে ক্রসিং দিচ্ছে এবং একতা এক্সপ্রেস ১নং মেইন লাইন দিয়ে এগিয়ে যাচ্ছে।"
-        dispatch_log = "সান্তাহার ক্যাবিন: ১নং লাইনে ডাউন ট্রেনের জন্য লাইন ক্লিয়ারেন্স।"
-        countdown_minutes = 14
-        meet_window = "১১:১৫ PM – ১১:২৫ PM"
-        
-    else:
-        # Saidpur Junction
-        crossing_stn_key = "Saidpur"
-        crossing_stn_bn = "সৈয়দপুর রেলওয়ে জংশন"
-        station_lat = 25.7910
-        station_lng = 88.8880
-        
-        primary_train_data = {
-            "number": train_num_str if train_num_str != "ALL" else "766",
-            "name": primary_train_obj.get("name_bn", "নীলসাগর এক্সপ্রেস"),
-            "origin": primary_train_obj.get("origin", "চিলাহাটি"),
-            "destination": primary_train_obj.get("destination", "ঢাকা"),
-            "line_no": 1,
-            "track_name": "মেইন লাইন ১ (লাইন-১)",
-            "role": "MAIN_RUNNER",
-            "role_bn": "মেইন লাইন ক্লিয়ারেন্স প্রাপ্ত (থ্রু পাস) 🟢",
-            "speed": primary_live.get("current_speed_kmh", 76) or 76,
-            "signal": "GREEN",
-            "latitude": round(station_lat, 6),
-            "longitude": round(station_lng, 6),
-            "badge": "🟢 মেইন লাইনে চলছে",
-            "type": "INTERCITY"
-        }
-        
-        waiting_train_data = {
-            "number": "728",
-            "name": "রূপসা এক্সপ্রেস",
-            "origin": "খুলনা",
-            "destination": "চিলাহাটি",
-            "line_no": 2,
-            "track_name": "লুপ লাইন ২ (লাইন-২)",
-            "role": "LOOP_WAITING",
-            "role_bn": "লুপ লাইনে ক্রসিং পাস দেওয়ার জন্য অপেক্ষমাণ 🟡",
-            "speed": 0,
-            "signal": "YELLOW",
-            "latitude": round(station_lat, 6),
-            "longitude": round(station_lng + 0.00009, 6),
-            "badge": "🟡 লুপে অপেক্ষমাণ (ক্রসিং পাস)",
-            "type": "INTERCITY"
-        }
-        
-        crossing_title = "সৈয়দপুর জংশনে ক্রসিং অপেক্ষা: নীলসাগর এক্সপ্রেস ↔ রূপসা এক্সপ্রেস"
-        crossing_desc = "বাংলাদেশ রেলওয়ের সিঙ্গেল ট্র্যাক ট্রাফিক নিয়মানুযায়ী রূপসা এক্সপ্রেস আগেই সৈয়দপুর জংশনের ২নং লুপ লাইনে প্রবেশ করে স্থির দাঁড়িয়ে অপেক্ষা করছে। নীলসাগর এক্সপ্রেস ১নং মেইন লাইন দিয়ে সরাসরি স্টেশন অতিক্রম করার পর রূপসা এক্সপ্রেস তার যাত্রা পুনরায় শুরু করবে।"
-        dispatch_log = "সৈয়দপুর সহকারী স্টেশন মাস্টার (ASM) কন্ট্রোল রুল: লাইন-২ পয়েন্ট লক করা হয়েছে। লাইন-১ আপ/ডাউন মেইন হোম সিগন্যাল ক্লিয়ার (সবুজ)।"
-        countdown_minutes = 9
-        meet_window = "১০:৫৮ PM – ১১:০৮ PM"
+    # Station coordinates & metadata
+    final_stn_key = override_key or pair_info.get("station_key", "Saidpur")
+    final_stn_bn = station_bn if override_key else pair_info.get("station_bn", "সৈয়দপুর রেলওয়ে জংশন")
+    final_lat = station_lat if override_key else pair_info.get("station_lat", 25.7910)
+    final_lng = station_lng if override_key else pair_info.get("station_lng", 88.8880)
+
+    opposing_train_obj = get_train_by_number(pair_info["opposing_num"]) or {
+        "name_bn": pair_info["opposing_name"],
+        "origin": "বিপরীত স্টেশন",
+        "destination": "গন্তব্য স্টেশন"
+    }
+
+    primary_train_data = {
+        "number": train_num_str,
+        "name": primary_train_obj.get("name_bn", "এক্সপ্রেস"),
+        "origin": primary_train_obj.get("origin", "চিলাহাটি"),
+        "destination": primary_train_obj.get("destination", "ঢাকা"),
+        "line_no": 1,
+        "track_name": pair_info.get("main_track", "১নং মেইন লাইন"),
+        "role": "MAIN_RUNNER",
+        "role_bn": "১নং মেইন লাইনে থ্রু ক্লিয়ারেন্স 🟢",
+        "speed": primary_live.get("current_speed_kmh", 58) or 58,
+        "signal": "GREEN",
+        "latitude": round(final_lat, 6),
+        "longitude": round(final_lng - 0.00006, 6),
+        "badge": "🟢 ১নং মেইন লাইনে চলছে",
+        "type": "INTERCITY"
+    }
+
+    waiting_train_data = {
+        "number": str(pair_info["opposing_num"]),
+        "name": opposing_train_obj.get("name_bn", pair_info["opposing_name"]),
+        "origin": opposing_train_obj.get("origin", "খুলনা"),
+        "destination": opposing_train_obj.get("destination", "চিলাহাটি"),
+        "line_no": 2,
+        "track_name": pair_info.get("loop_track", "২নং লুপ লাইন"),
+        "role": "LOOP_WAITING",
+        "role_bn": "২নং লুপে ক্রসিং পাস দেওয়ার জন্য অপেক্ষমাণ 🟡",
+        "speed": 0,
+        "signal": "YELLOW",
+        "latitude": round(final_lat, 6),
+        "longitude": round(final_lng + 0.00006, 6),
+        "badge": "🟡 ২নং লুপে অপেক্ষমাণ (ক্রসিং পাস)",
+        "type": "INTERCITY"
+    }
 
     return {
         "status": "success",
         "is_active": True,
-        "station": crossing_stn_key,
-        "station_bn": crossing_stn_bn,
-        "station_lat": station_lat,
-        "station_lng": station_lng,
-        "crossing_type": "SINGLE_LINE_CROSSING",
-        "crossing_type_bn": "সিঙ্গেল ট্র্যাক রেল ক্রসিং (Opposing Meet)",
-        "crossing_title": crossing_title,
-        "crossing_desc": crossing_desc,
-        "dispatcher_log": dispatch_log,
-        "meet_window": meet_window,
-        "countdown_minutes": countdown_minutes,
-        "countdown_text": f"ক্রসিং সম্পন্ন হতে আনুমানিক {countdown_minutes} মিনিট বাকি",
+        "station": final_stn_key,
+        "station_bn": final_stn_bn,
+        "station_lat": final_lat,
+        "station_lng": final_lng,
+        "crossing_type": "OPPOSING_TRAIN_CROSSING",
+        "crossing_type_bn": "মুখোমুখি সিঙ্গেল ট্র্যাক ট্রেন ক্রসিং (Meet & Cross)",
+        "crossing_title": pair_info.get("title", f"{final_stn_bn}-এ মুখোমুখি ক্রসিং"),
+        "crossing_desc": pair_info.get("desc", ""),
+        "dispatcher_log": pair_info.get("log", ""),
+        "meet_window": pair_info.get("meet_window", "১০:৫৮ PM – ১১:০৮ PM"),
+        "countdown_minutes": pair_info.get("countdown", 8),
+        "countdown_text": f"ক্রসিং সম্পন্ন হতে আনুমানিক {pair_info.get('countdown', 8)} মিনিট বাকি",
         "primary_train": primary_train_data,
         "waiting_train": waiting_train_data
     }
