@@ -438,17 +438,20 @@ def scan_all_stations_ticket_availability(train_number, date_of_journey, dest_st
             if is_passed or days_ahead < 0:
                 base_seats = 0
             elif days_ahead == 0:
-                base_pool = 6 if is_major else 3
-                base_seats = (base_hash % base_pool) + (1 if (base_hash % 3 == 0) else 0)
+                base_pool = 8 if is_major else 4
+                base_seats = (base_hash % base_pool) + (2 if (base_hash % 3 == 0) else 1)
             elif days_ahead == 1:
-                base_pool = 12 if is_major else 6
-                base_seats = (6 if is_major else 3) + (base_hash % base_pool)
+                base_pool = 14 if is_major else 8
+                base_seats = (8 if is_major else 4) + (base_hash % base_pool)
             elif 2 <= days_ahead <= 10:
-                base_pool = 18 if is_major else 10
+                base_pool = 20 if is_major else 12
                 base_min = 14 if is_major else 8
                 base_seats = base_min + (base_hash % base_pool)
             else:
-                base_seats = 0
+                # Advance Booking Quota for dates beyond 10 days
+                base_pool = 22 if is_major else 14
+                base_min = 12 if is_major else 6
+                base_seats = base_min + (base_hash % base_pool)
 
             for cls in train.get("classes", ["SHOVAN_CHAIR", "SNIGDHA"]):
                 fare = train.get("fares", {}).get(cls, 450)
@@ -460,10 +463,6 @@ def scan_all_stations_ticket_availability(train_number, date_of_journey, dest_st
                     seats = 0
                     status_str = "DEPARTED"
                     status_bn = "ট্রেন চলে গেছে"
-                elif days_ahead > 10:
-                    seats = 0
-                    status_str = "ADVANCE_NOT_OPEN"
-                    status_bn = "১০ দিন আগে খুলবে"
                 else:
                     if cls in ["SHOVAN_CHAIR", "S_CHAIR", "SHOVAN"]:
                         seats = max(1, int(base_seats * 0.7))
@@ -480,7 +479,7 @@ def scan_all_stations_ticket_availability(train_number, date_of_journey, dest_st
                     "status": status_str,
                     "status_bn": status_bn
                 }
-                if not is_passed and 0 <= days_ahead <= 10:
+                if not is_passed and days_ahead >= 0:
                     station_total_seats += seats
 
         if is_passed:
@@ -592,6 +591,7 @@ def scan_all_stations_ticket_availability(train_number, date_of_journey, dest_st
         "target_destination_bn": STATIONS_DICT.get(dest_station, {}).get("name_bn", dest_station),
         "date_of_journey": date_of_journey,
         "is_today": is_today,
+        "is_completed_today": (is_today and passed_count >= len(station_records)),
         "scanned_at": now_str,
         "stoppages_chain": stoppages,
         "total_stations_scanned": len(station_records),

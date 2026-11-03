@@ -122,30 +122,31 @@ function initLeafletSatelliteMap() {
         attribution: 'Google Maps BD'
     });
 
-    // Dark Mode Map
-    baseTileLayers.dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        subdomains: 'abcd',
-        attribution: 'Carto Dark'
-    });
-
     leafletMap = L.map('leaflet-map', {
-        center: [24.0, 90.0],
+        center: [24.2, 89.9],
         zoom: 7,
         zoomControl: true,
         attributionControl: false,
-        layers: [baseTileLayers.satellite]
+        layers: [baseTileLayers.satellite],
+        touchZoom: true,
+        dragging: true,
+        tap: true,
+        tapTolerance: 20,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        bounceAtZoomLimits: false,
+        inertia: true,
+        inertiaDeceleration: 3000
     });
 
     setMapLayer('satellite');
     applyMap3DTransform();
     setTimeout(() => {
         if (leafletMap) leafletMap.invalidateSize();
-        fetchAndRenderLiveCrossings('766');
     }, 400);
 }
 
-// Switch Map Layers (Satellite vs Railway vs Street vs Dark)
+// Switch Map Layers (Satellite vs Railway vs Street)
 function setMapLayer(mode) {
     if (!leafletMap) return;
     currentMapMode = mode;
@@ -156,7 +157,7 @@ function setMapLayer(mode) {
         leafletMap.addLayer(baseTileLayers[mode]);
     }
 
-    ['satellite', 'railway', 'street', 'dark'].forEach(m => {
+    ['satellite', 'railway', 'street'].forEach(m => {
         const btn = document.getElementById(`btn-layer-${m}`);
         if (btn) {
             if (m === mode) {
@@ -308,7 +309,6 @@ function onMapTrainChange() {
     const select = document.getElementById('map-train-select');
     selectedMapTrain = select.value;
     refreshLiveMap();
-    fetchAndRenderLiveCrossings(selectedMapTrain);
 }
 
 // Fleet Category Filter Toggle
@@ -670,9 +670,14 @@ function createStationIcon(name, isNext = false, isOrigin = false, isDest = fals
     });
 }
 
+let otherFleetMarkers = [];
+
 function clearMapLayers() {
     Object.values(trainMarkers).forEach(marker => leafletMap.removeLayer(marker));
     trainMarkers = {};
+
+    otherFleetMarkers.forEach(m => leafletMap.removeLayer(m));
+    otherFleetMarkers = [];
 
     stationMarkers.forEach(m => leafletMap.removeLayer(m));
     stationMarkers = [];
@@ -685,6 +690,91 @@ function clearMapLayers() {
     if (routePolyline) {
         leafletMap.removeLayer(routePolyline);
         routePolyline = null;
+    }
+}
+
+// Crisp Authentic Locomotive Marker for Other Active Network Trains
+function createFleetLocomotiveIcon(train) {
+    const isRunning = train.is_running;
+    const isArrived = train.status === 'ARRIVED';
+    const statusBorder = isRunning ? '#10b981' : (isArrived ? '#06b6d4' : '#f59e0b');
+    const statusBg = isRunning ? '#10b981' : (isArrived ? '#06b6d4' : '#f59e0b');
+    const trainName = train.name_bn || train.number;
+    
+    return L.divIcon({
+        className: 'fleet-locomotive-marker',
+        html: `
+            <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <!-- Train Name Pill on top -->
+                <div style="position: absolute; top: -19px; background: rgba(15, 23, 42, 0.96); border: 1.5px solid ${statusBorder}; border-radius: 9999px; padding: 1px 7px; font-size: 9.5px; font-weight: 800; color: #f8fafc; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.8); display: flex; align-items: center; gap: 3px; pointer-events: none; z-index: 10;">
+                    <span style="display: inline-block; width: 6px; height: 6px; border-radius: 9999px; background: ${statusBg};"></span>
+                    <span>${train.number} ${trainName}</span>
+                </div>
+                <!-- Locomotive Badge -->
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #065f46, #022c22); border: 2px solid ${statusBorder}; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.7);">
+                    <span style="font-size: 18px;">🚂</span>
+                </div>
+                <!-- Speed / Status badge below -->
+                <div style="position: absolute; bottom: -11px; background: #090d16; border: 1px solid rgba(255,255,255,0.25); border-radius: 5px; padding: 0 5px; font-size: 8.5px; font-weight: 700; color: #34d399; white-space: nowrap; z-index: 10;">
+                    ${isRunning ? `${train.current_speed_kmh} km/h` : (isArrived ? 'পৌঁছেছে' : 'অপেক্ষমান')}
+                </div>
+            </div>
+        `,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+    });
+}
+
+// Multi-Train Live Tracking Engine along physical tracks
+async function renderOtherFleetTrainsOnMap(primaryNumber) {
+    if (!leafletMap) return;
+
+    try {
+        if (!allLiveTrainsData || allLiveTrainsData.length === 0) {
+            const res = await fetch('/api/all_live_trains');
+            const data = await res.json();
+            if (data.status === 'success') {
+                allLiveTrainsData = data.trains || [];
+            }
+        }
+
+        const otherTrains = (allLiveTrainsData || []).filter(t => 
+            String(t.number) !== String(primaryNumber) && t.is_running
+        );
+
+        otherFleetMarkers.forEach(m => leafletMap.removeLayer(m));
+        otherFleetMarkers = [];
+
+        otherTrains.forEach(t => {
+            const marker = L.marker([t.latitude, t.longitude], {
+                icon: createFleetLocomotiveIcon(t),
+                zIndexOffset: 800
+            }).addTo(leafletMap);
+
+            const photo = getTrainPhoto(t.number);
+            marker.bindPopup(`
+                <div style="font-family: sans-serif; min-width: 220px; color: #0f172a; overflow: hidden; border-radius: 8px;">
+                    <div style="width: 100%; height: 95px; background: url('${photo}') center/cover no-repeat; border-radius: 6px; margin-bottom: 6px; border: 1px solid #cbd5e1;"></div>
+                    <div style="font-weight: 800; font-size: 14px; color: #065f46; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px;">
+                        [${t.number}] ${t.name_bn}
+                    </div>
+                    <div style="font-size: 11px; margin-top: 5px; line-height: 1.5;">
+                        <div>🟢 <strong>অবস্থা:</strong> <span style="color: #059669; font-weight: bold;">লাইভ চলমান (অন-ট্র্যাক)</span></div>
+                        <div>📍 <strong>বর্তমান অবস্থান:</strong> <strong>${t.last_station}</strong></div>
+                        <div>⏩ <strong>পরবর্তী স্টপ:</strong> <span style="color: #b45309; font-weight: bold;">${t.next_station}</span></div>
+                        <div>⚡ <strong>গতি:</strong> ${t.current_speed_kmh} km/h | <strong>বিলম্ব:</strong> ${t.delay_text}</div>
+                        <div>🚉 <strong>রুট:</strong> ${t.origin} ➔ ${t.destination}</div>
+                    </div>
+                    <button onclick="selectTrainOnMap('${t.number}')" style="margin-top: 8px; width: 100%; background: #059669; color: white; border: none; padding: 6px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        <span>🛰️ এই ট্র্যাকে স্যুইচ করুন</span>
+                    </button>
+                </div>
+            `);
+
+            otherFleetMarkers.push(marker);
+        });
+    } catch (e) {
+        console.error('Failed to render other fleet trains on map:', e);
     }
 }
 
@@ -894,6 +984,7 @@ async function renderSingleTrainOnMap(trainNumber, isBackground) {
 
             // Update continuous motion loop target without resetting position
             startLiveTrainMotionLoop(live, coords, true);
+            renderOtherFleetTrainsOnMap(live.number);
             return;
         }
 
@@ -1002,6 +1093,7 @@ async function renderSingleTrainOnMap(trainNumber, isBackground) {
 
         // Start live continuous track motion loop (Foreground initial)
         startLiveTrainMotionLoop(live, coords, false);
+        renderOtherFleetTrainsOnMap(live.number);
 
         // 6. Smooth Pan/Zoom & Journey Direction Alignment (Bottom to Top)
         leafletMap.setView([live.latitude, live.longitude], 10, { animate: true });
@@ -1119,7 +1211,6 @@ function selectTrainOnMap(trainNum) {
         select.value = trainNum;
         selectedMapTrain = trainNum;
         refreshLiveMap();
-        fetchAndRenderLiveCrossings(trainNum);
         
         // Scroll smoothly to map
         const mapFrame = document.getElementById('leaflet-map');
@@ -1934,6 +2025,11 @@ function toggleWatcherEngine() {
     if (window.lucide) window.lucide.createIcons();
 }
 
+let watcherFoundTrains = [];
+let watcherLastOrigin = 'Dhaka';
+let watcherLastDest = 'Chittagong';
+let watcherLastDate = '';
+
 async function runWatcherCycle() {
     scanCount++;
     const scansEl = document.getElementById('radar-scans-count');
@@ -1955,6 +2051,10 @@ async function runWatcherCycle() {
         date = `${yyyy}-${mm}-${dd}`;
     }
 
+    watcherLastOrigin = origin;
+    watcherLastDest = dest;
+    watcherLastDate = date;
+
     logWatcher(`[${new Date().toLocaleTimeString('en-US')}] স্ক্যানিং: ${origin} ➔ ${dest} (${date})...`);
 
     try {
@@ -1964,11 +2064,13 @@ async function runWatcherCycle() {
         if (data.trains && data.trains.length > 0) {
             let foundAny = false;
             let totalAvailableAcrossFleet = 0;
+            const currentAvailable = [];
+
             data.trains.forEach(t => {
                 if (t.total_available > 0) {
                     foundAny = true;
                     totalAvailableAcrossFleet += t.total_available;
-                    logWatcher(`🚨 [${t.number}] ${t.name_bn}: ${t.total_available}টি আসন পাওয়া গেছে!`);
+                    currentAvailable.push(t);
                 }
             });
 
@@ -1976,6 +2078,10 @@ async function runWatcherCycle() {
                 alertCount += totalAvailableAcrossFleet;
                 const alertsEl = document.getElementById('radar-alerts-count');
                 if (alertsEl) alertsEl.textContent = `${alertCount} টি সিট পাওয়া গেছে`;
+                
+                watcherFoundTrains = currentAvailable;
+                renderWatcherAvailableCards(watcherFoundTrains, origin, dest, date, false);
+
                 playRailwayChime();
                 showToast(`🚨 সিট হান্টার: ${totalAvailableAcrossFleet} টি সিট খালি পাওয়া গেছে!`, 'success');
             } else {
@@ -1989,6 +2095,103 @@ async function runWatcherCycle() {
     }
 }
 
+function renderWatcherAvailableCards(trains, origin, dest, date, isReSort = false) {
+    const logEl = document.getElementById('watcher-log');
+    if (!logEl) return;
+
+    if (isReSort) {
+        const oldCards = logEl.querySelectorAll('.watcher-seat-card');
+        oldCards.forEach(c => c.remove());
+    }
+
+    trains.forEach(t => {
+        const originClean = (t.journey_from || origin || 'Dhaka').toUpperCase();
+        const destClean = (t.journey_to || dest || 'Chittagong').toUpperCase();
+        const doj = t.date || date || '';
+        const bookingUrl = t.booking_url || `https://eticket.railway.gov.bd/booking/train/search?fromcity=${encodeURIComponent(originClean)}&tocity=${encodeURIComponent(destClean)}&doj=${encodeURIComponent(doj)}&class=S_CHAIR`;
+
+        let breakdownPills = '';
+        if (t.seats) {
+            Object.entries(t.seats).forEach(([clsKey, sInfo]) => {
+                if (sInfo.available > 0) {
+                    let label = clsKey;
+                    if (clsKey === 'S_CHAIR' || clsKey === 'SHOVAN_CHAIR') label = 'শোভন চেয়ার';
+                    else if (clsKey === 'SNIGDHA') label = 'স্নিগ্ধা';
+                    else if (clsKey === 'AC_B' || clsKey === 'AC_BERTH') label = 'এসি বার্থ';
+                    else if (clsKey === 'AC_S' || clsKey === 'AC_CABIN') label = 'এসি সিট';
+                    else if (clsKey === 'SHOVAN') label = 'শোভন';
+                    breakdownPills += `<span class="px-2 py-0.5 rounded-lg bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 font-mono text-[10.5px] font-bold">${label}: ${sInfo.available}টি</span>`;
+                }
+            });
+        }
+        if (!breakdownPills) {
+            breakdownPills = `<span class="px-2 py-0.5 rounded-lg bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 font-mono text-[10.5px] font-bold">মোট ${t.total_available}টি আসন</span>`;
+        }
+
+        const cardHtml = `
+            <div class="watcher-seat-card my-2 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-950 border-2 border-emerald-500/60 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs" data-train-number="${t.number}" data-seats="${t.total_available}">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-600/30 border border-emerald-500/50 flex items-center justify-center text-xl flex-shrink-0 shadow-inner">
+                        🚆
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="font-extrabold text-white text-sm tracking-wide">[${t.number}] ${t.name_bn}</span>
+                            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-200 border border-emerald-500/50 font-mono font-black text-[11px] animate-pulse">
+                                🚨 ${t.total_available}টি আসন খালি!
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2.5 text-slate-300 mt-1">
+                            <span class="text-slate-300">📍 <strong>${t.journey_from || origin} ➔ ${t.journey_to || dest}</strong></span>
+                            <span class="text-amber-300">🕒 প্রস্থান: <strong class="text-white">${t.journey_dep_time || t.departure || '—'}</strong></span>
+                            <span class="text-slate-400">📅 <strong class="text-emerald-300 font-mono">${doj}</strong></span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                            ${breakdownPills}
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                    <a href="${bookingUrl}" target="_blank" rel="noopener noreferrer" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-900/50 hover:scale-105 active:scale-95 transition-all">
+                        <span>🎟️ সরাসরি টিকিট কাটুন ↗</span>
+                    </a>
+                </div>
+            </div>
+        `;
+
+        logWatcher(cardHtml, true);
+    });
+}
+
+function sortWatcherAvailableSeats(criteria = 'seats') {
+    if (!watcherFoundTrains || watcherFoundTrains.length === 0) {
+        showToast('বাছাই করার মতো কোনো খালি সিট পাওয়া যায়নি।', 'info');
+        return;
+    }
+
+    if (criteria === 'seats') {
+        watcherFoundTrains.sort((a, b) => (b.total_available || 0) - (a.total_available || 0));
+        showToast('🔥 সর্বোচ্চ আসন সংখ্যা অনুযায়ী সাজানো হয়েছে', 'success');
+    } else if (criteria === 'number') {
+        watcherFoundTrains.sort((a, b) => String(a.number).localeCompare(String(b.number)));
+        showToast('🔢 ট্রেন নম্বর অনুযায়ী সাজানো হয়েছে', 'success');
+    } else if (criteria === 'time') {
+        watcherFoundTrains.sort((a, b) => String(a.journey_dep_time || a.departure || '').localeCompare(String(b.journey_dep_time || b.departure || '')));
+        showToast('🕒 যাত্রার সময় অনুযায়ী সাজানো হয়েছে', 'success');
+    }
+
+    renderWatcherAvailableCards(watcherFoundTrains, watcherLastOrigin, watcherLastDest, watcherLastDate, true);
+}
+
+function clearWatcherLog() {
+    const logEl = document.getElementById('watcher-log');
+    if (logEl) {
+        logEl.innerHTML = '<div class="text-slate-500 py-3 text-center">লগ খালি করা হয়েছে। নতুন স্ক্যান ফলাফল এখানে প্রদর্শিত হবে।</div>';
+    }
+    watcherFoundTrains = [];
+    showToast('লগ সাফ করা হয়েছে', 'info');
+}
+
 function startWatchingTrain(number, name, origin, dest) {
     switchTab('watcher');
     if (!watcherRunning) {
@@ -1998,12 +2201,21 @@ function startWatchingTrain(number, name, origin, dest) {
     showToast(`🎯 [${number}] ${name} সিট হান্টারে যুক্ত করা হয়েছে!`, 'success');
 }
 
-function logWatcher(msg) {
+function logWatcher(msg, isCard = false) {
     const logEl = document.getElementById('watcher-log');
     if (!logEl) return;
     const entry = document.createElement('div');
-    entry.textContent = msg;
+    if (isCard) {
+        entry.innerHTML = msg;
+    } else {
+        entry.className = "py-1 border-b border-slate-900/60 text-slate-400";
+        entry.textContent = msg;
+    }
     logEl.prepend(entry);
+
+    while (logEl.children.length > 50) {
+        logEl.removeChild(logEl.lastChild);
+    }
 }
 
 // =========================================================================
@@ -2092,13 +2304,15 @@ function applyMap3DTransform() {
     const viewport = document.getElementById('map-3d-viewport');
     if (!mapEl || !viewport) return;
 
-    if (mapTilt > 0) {
+    const isMobile = window.innerWidth < 768;
+    // On mobile screens, disable 3D rotateX to guarantee buttery smooth 2-finger touch gesture navigation!
+    if (mapTilt > 0 && !isMobile) {
         viewport.style.perspective = '1200px';
         mapEl.style.transform = `rotateX(${mapTilt}deg) rotateZ(${mapBearing}deg)`;
         mapEl.style.transformOrigin = 'center center';
     } else {
         viewport.style.perspective = 'none';
-        mapEl.style.transform = mapBearing ? `rotateZ(${mapBearing}deg)` : 'none';
+        mapEl.style.transform = (mapBearing && !isMobile) ? `rotateZ(${mapBearing}deg)` : 'none';
         mapEl.style.transformOrigin = 'center center';
     }
 }
@@ -2315,38 +2529,8 @@ async function fetchAndRenderLiveCrossings(trainNum = '766', stationKey = null) 
 function renderCrossingHUD(data) {
     const hud = document.getElementById('map-crossing-hud');
     const reopenBtn = document.getElementById('btn-reopen-crossing-hud');
-    if (!hud) return;
-
-    const isMobile = window.innerWidth < 768;
-
-    // On mobile devices, keep map 100% clean and unobstructed by default
-    if (isCrossingHUDDismissedByUser || isMobile) {
-        hud.classList.add('hidden');
-        if (reopenBtn) {
-            reopenBtn.classList.remove('hidden');
-            reopenBtn.classList.add('flex');
-        }
-    } else {
-        hud.classList.remove('hidden');
-        if (reopenBtn) reopenBtn.classList.add('hidden');
-    }
-    const stnEl = document.getElementById('crossing-hud-station');
-    const titleEl = document.getElementById('crossing-hud-title');
-    const descEl = document.getElementById('crossing-hud-desc');
-    const mainEl = document.getElementById('crossing-train-main');
-    const waitEl = document.getElementById('crossing-train-waiting');
-    const countdownEl = document.getElementById('crossing-hud-countdown');
-
-    if (stnEl) stnEl.textContent = data.station_bn;
-    if (titleEl) titleEl.textContent = data.crossing_title;
-    if (descEl) descEl.textContent = data.crossing_desc;
-    if (mainEl && data.primary_train) {
-        mainEl.textContent = `[${data.primary_train.track_name}] ${data.primary_train.name}`;
-    }
-    if (waitEl && data.waiting_train) {
-        waitEl.textContent = `[${data.waiting_train.track_name}] ${data.waiting_train.name} (${data.waiting_train.badge})`;
-    }
-    if (countdownEl) countdownEl.textContent = `⏱️ ${data.countdown_text}`;
+    if (hud) hud.classList.add('hidden');
+    if (reopenBtn) reopenBtn.classList.add('hidden');
 }
 
 // Authentic High-Fidelity Train Icon for Station Yards & Crossings
@@ -3435,7 +3619,7 @@ if (document.readyState === 'loading') {
 // ============================================================================
 let lastScannedStationRecords = [];
 let stationScannerInitialized = false;
-let showAllPassedStations = false;
+let showAllPassedStations = true;
 
 function initStationTicketScannerTab() {
     const dateInput = document.getElementById('station-scan-date');
@@ -3843,7 +4027,7 @@ async function runStationTicketScan() {
             if (summaryCard) summaryCard.classList.remove('hidden');
             if (filterBar) filterBar.classList.remove('hidden');
 
-            renderStationScanCards(lastScannedStationRecords, data.target_destination, data.date_of_journey, data.train_number, data.train_name_bn, data.is_today, data.live_summary);
+            renderStationScanCards(lastScannedStationRecords, data.target_destination, data.date_of_journey, data.train_number, data.train_name_bn, data.is_today, data.live_summary, data.is_completed_today);
             showToast(`✅ ${data.train_name_bn}-এর প্রতিটি স্টেশনের টিকিট সফলভাবে স্ক্যান হয়েছে!`, 'success');
         } else {
             grid.innerHTML = `
@@ -3871,7 +4055,7 @@ async function runStationTicketScan() {
     }
 }
 
-function renderStationScanCards(stations, destStation, dateStr, trainNum, trainNameBn, isToday = false, liveSummary = null) {
+function renderStationScanCards(stations, destStation, dateStr, trainNum, trainNameBn, isToday = false, liveSummary = null, isCompletedToday = false) {
     const grid = document.getElementById('station-tickets-results-grid');
     if (!grid) return;
 
@@ -3885,6 +4069,32 @@ function renderStationScanCards(stations, destStation, dateStr, trainNum, trainN
     }
 
     let html = '';
+
+    // If all stations passed today or completed: show prominent Tomorrow Action Banner
+    const allPassed = stations.every(s => s.is_passed);
+    if (isCompletedToday || (isToday && allPassed)) {
+        html += `
+            <div class="p-4 rounded-2xl bg-amber-950/70 border-2 border-amber-500/50 shadow-xl mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-600/30 border border-amber-500/50 flex items-center justify-center text-xl flex-shrink-0">
+                        🏁
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-white text-sm">[${trainNum}] ${trainNameBn}</span>
+                            <span class="px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-200 font-bold text-[10px]">আজকের যাত্রা সমাপ্ত</span>
+                        </div>
+                        <div class="text-slate-300 mt-0.5">
+                            ট্রেনটি আজকের ট্রিপ শেষ করে গন্তব্যে পৌঁছে গেছে। আগামীকাল বা অন্য যেকোনো দিনের অগ্রিম টিকিট দেখতে পারেন:
+                        </div>
+                    </div>
+                </div>
+                <button onclick="setStationScanDateTomorrow()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg active:scale-95 transition-all">
+                    <span>📅 আগামীকালের টিকিট দেখুন ➔</span>
+                </button>
+            </div>
+        `;
+    }
 
     // If live running today: show a prominent Live Position Status Card at top of results
     if (isToday && liveSummary && liveSummary.is_running) {
@@ -4063,7 +4273,9 @@ function renderStationScanCards(stations, destStation, dateStr, trainNum, trainN
     cards.forEach(card => {
         const isPassed = card.getAttribute('data-is-passed') === 'true';
         if (isPassed) {
-            card.style.display = showAllPassedStations ? 'block' : 'none';
+            card.style.display = (showAllPassedStations || allPassed) ? 'block' : 'none';
+        } else {
+            card.style.display = 'block';
         }
     });
 

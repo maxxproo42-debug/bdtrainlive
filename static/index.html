@@ -152,6 +152,11 @@
         gap: 0.25rem;
       }
     }
+    #leaflet-map {
+      touch-action: pan-x pan-y pinch-zoom !important;
+      -webkit-user-select: none;
+      user-select: none;
+    }
     .mobile-nav-drawer {
       display: none;
       background: rgba(10, 14, 23, 0.98);
@@ -415,9 +420,6 @@
               <button onclick="setMapLayer('street')" id="btn-layer-street" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition flex items-center gap-1">
                 <span>🗺️ রুট</span>
               </button>
-              <button onclick="setMapLayer('dark')" id="btn-layer-dark" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition flex items-center gap-1">
-                <span>🏙️ ডার্ক</span>
-              </button>
             </div>
 
             <button onclick="refreshLiveMap()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-2 transition">
@@ -522,79 +524,9 @@
       <div id="map-main-wrapper" class="glass-card rounded-2xl overflow-hidden border-slate-800 shadow-2xl relative transition-all duration-300">
         <!-- Perspective Viewport for Smooth Google Satellite & Landscape -->
         <div id="map-3d-viewport" class="w-full h-[65vh] min-h-[460px] max-h-[620px] md:h-[780px] lg:h-[840px] overflow-hidden relative transition-all duration-300">
-          <div id="leaflet-map" class="w-full h-full bg-slate-950 z-10" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0;"></div>
+          <div id="leaflet-map" class="w-full h-full bg-slate-950 z-10" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0; touch-action: pan-x pan-y pinch-zoom;"></div>
         </div>
         
-        <!-- Floating Live Train Crossing & Signal Alert HUD (Desktop Sidebar / Mobile Bottom Sheet) -->
-        <div id="map-crossing-hud" class="hidden md:block absolute top-4 left-4 z-30 max-w-sm sm:max-w-md bg-slate-950/95 backdrop-blur-md p-3.5 rounded-2xl border-2 border-amber-500/60 text-xs text-white shadow-2xl space-y-2.5 transition-all">
-          <div class="flex items-center justify-between gap-2 border-b border-amber-500/30 pb-2">
-            <div class="flex items-center gap-1.5 font-bold text-amber-300">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span class="text-sm">🚆 মুখোমুখি ট্রেন ক্রসিং রাডার</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span id="crossing-hud-station" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40 text-[10px] font-bold">সৈয়দপুর জংশন</span>
-              <button onclick="toggleCrossingHUDMinimize()" title="মিনিমাইজ / এক্সপ্যান্ড করুন" class="p-1 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition">
-                <span id="btn-crossing-min-icon" class="text-xs font-bold leading-none">➖</span>
-              </button>
-              <button onclick="closeCrossingHUD()" title="ক্রসিং অ্যালার্ট সম্পূর্ণ বন্ধ করুন" class="px-2.5 py-1 rounded-lg bg-rose-950/90 hover:bg-rose-700 text-rose-300 hover:text-white border border-rose-500/50 text-[11px] font-bold transition flex items-center gap-1 shadow active:scale-95">
-                <span>✕ বন্ধ করুন</span>
-              </button>
-            </div>
-          </div>
-          
-          <!-- Collapsible Body Section -->
-          <div id="crossing-hud-body" class="space-y-2 text-[11px] transition-all">
-            <!-- Junction Switcher Pills -->
-            <div class="flex items-center gap-1 pt-0.5 overflow-x-auto pb-1 text-[10px]">
-              <span class="text-slate-400 font-semibold flex-shrink-0">জংশন:</span>
-              <button onclick="switchCrossingStation('Saidpur')" id="cros-pill-Saidpur" class="px-2 py-0.5 rounded-lg font-bold bg-amber-600 text-white flex-shrink-0">📍 সৈয়দপুর</button>
-              <button onclick="switchCrossingStation('Parbatipur')" id="cros-pill-Parbatipur" class="px-2 py-0.5 rounded-lg font-medium bg-slate-900 text-slate-300 hover:text-white border border-slate-700 flex-shrink-0">📍 পার্বতীপুর</button>
-              <button onclick="switchCrossingStation('Santahar')" id="cros-pill-Santahar" class="px-2 py-0.5 rounded-lg font-medium bg-slate-900 text-slate-300 hover:text-white border border-slate-700 flex-shrink-0">📍 সান্তাহার</button>
-              <button onclick="switchCrossingStation('Dhaka')" id="cros-pill-Dhaka" class="px-2 py-0.5 rounded-lg font-medium bg-slate-900 text-slate-300 hover:text-white border border-slate-700 flex-shrink-0">📍 ঢাকা</button>
-            </div>
-
-            <div id="crossing-hud-title" class="font-bold text-white text-xs leading-snug">
-              সৈয়দপুর জংশনে ক্রসিং অপেক্ষা: নীলসাগর এক্সপ্রেস ↔ রূপসা এক্সপ্রেস
-            </div>
-            <p id="crossing-hud-desc" class="text-slate-300 leading-relaxed text-[10.5px]">
-              লুপ লাইন-২ এ দাঁড়িয়ে ক্রসিং পাস দিচ্ছে রূপসা এক্সপ্রেস। নীলসাগর এক্সপ্রেস (৭৬৬) মেইন লাইন-১ দিয়ে থ্রু পাস করছে।
-            </p>
-            <div class="grid grid-cols-2 gap-2 pt-1">
-              <div class="p-2 rounded-xl bg-emerald-950/70 border border-emerald-500/40">
-                <div class="text-[10px] text-emerald-300 font-bold flex items-center gap-1">
-                  <span>🟢 লাইন-১ (মেইন)</span>
-                </div>
-                <div id="crossing-train-main" class="font-black text-white text-xs mt-0.5 truncate">৭৬৬ নীলসাগর (থ্রু)</div>
-              </div>
-              <div class="p-2 rounded-xl bg-amber-950/70 border border-amber-500/40">
-                <div class="text-[10px] text-amber-300 font-bold flex items-center gap-1">
-                  <span>🟡 লাইন-২ (লুপ)</span>
-                </div>
-                <div id="crossing-train-waiting" class="font-black text-white text-xs mt-0.5 truncate">৭৮৪ রূপসা (অপেক্ষমাণ)</div>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800 text-[10px]">
-              <span id="crossing-hud-countdown" class="text-slate-300 font-mono">⏱️ আনুমানিক ৮ মিনিট বাকি</span>
-              <div class="flex items-center gap-1.5">
-                <button onclick="zoomToCrossingStation()" class="px-2.5 py-1 rounded-lg bg-amber-500/30 hover:bg-amber-500 text-amber-200 hover:text-slate-950 font-bold transition flex items-center gap-1">
-                  <span>🛰️ স্পট জুম</span>
-                </button>
-                <button onclick="scrollToStationYard()" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition flex items-center gap-1 shadow">
-                  <span>🚉 ইয়ার্ড লাইন</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Floating Reopen Button when Crossing HUD is closed (Always sleek and compact on mobile!) -->
-        <button id="btn-reopen-crossing-hud" onclick="openCrossingHUD()" class="absolute top-2 left-2 md:top-4 md:left-4 z-20 px-2.5 py-1.5 rounded-xl bg-slate-950/90 border border-emerald-500/60 text-emerald-300 hover:text-white hover:bg-emerald-600/30 text-[11px] md:text-xs font-bold shadow-xl flex items-center gap-1.5 backdrop-blur-md transition active:scale-95">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          <span>🚆 মুখোমুখি ক্রসিং রাডার</span>
-        </button>
-
         <!-- Floating Live Train Tracking Area & Track Zoom HUD (Ultra sleek on mobile!) -->
         <div id="map-live-area-badge" class="absolute top-2 right-2 md:top-4 md:right-4 z-20 max-w-[210px] sm:max-w-xs md:max-w-sm bg-slate-950/95 backdrop-blur-md p-2 sm:p-3 md:p-3.5 rounded-xl md:rounded-2xl border border-emerald-500/40 text-[10.5px] sm:text-xs text-white shadow-2xl space-y-1.5 md:space-y-2 transition-all">
           <div class="flex items-center justify-between gap-1.5 border-b border-slate-800 pb-1.5 md:pb-2">
@@ -1363,7 +1295,7 @@
               <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-400"></i>
               <span>যাত্রার তারিখ (Date):</span>
             </label>
-            <input type="date" id="station-scan-date" class="w-full bg-slate-800 text-white text-xs rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 font-mono shadow-inner">
+            <input type="date" id="station-scan-date" onchange="runStationTicketScan()" class="w-full bg-slate-800 text-white text-xs rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 font-mono shadow-inner">
             <p class="text-[10px] text-slate-400">আজকের বা ভবিষ্যতের যেকোনো তারিখ</p>
           </div>
 
@@ -1543,17 +1475,36 @@
           </div>
         </div>
 
-        <!-- Live Watcher Console Logs -->
-        <div class="mt-6 bg-slate-950 p-4 rounded-xl border border-slate-800">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
-              <i data-lucide="terminal" class="w-3.5 h-3.5 text-emerald-400"></i>
-              রিয়েল-টাইম স্ক্যান লগ
-            </span>
-            <span class="text-[11px] text-slate-500">Auto-refreshing every 10s</span>
+        <!-- Live Watcher Console Logs & Available Seat Direct Links -->
+        <div class="mt-6 bg-slate-950 p-4 rounded-xl border border-slate-800 shadow-xl">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 mb-3 border-b border-slate-800/80 pb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+                <span>রিয়েল-টাইম স্ক্যান লগ ও আসন বুকিং লিঙ্ক</span>
+              </span>
+              <span class="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">Auto 10s</span>
+            </div>
+
+            <!-- Sorting & Quick Action Controls -->
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="text-[11px] text-slate-400 font-medium mr-1">সাজান:</span>
+              <button type="button" onclick="sortWatcherAvailableSeats('seats')" class="px-2.5 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-[11px] font-bold transition flex items-center gap-1 active:scale-95 shadow">
+                <span>🔥 সর্বোচ্চ সিট আগে</span>
+              </button>
+              <button type="button" onclick="sortWatcherAvailableSeats('number')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                <span>🔢 ট্রেন নম্বর</span>
+              </button>
+              <button type="button" onclick="sortWatcherAvailableSeats('time')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                <span>🕒 প্রস্থান সময়</span>
+              </button>
+              <button type="button" onclick="clearWatcherLog()" title="লগ সাফ করুন" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-800/50 text-[11px] font-semibold transition ml-1">
+                <span>মুছুন</span>
+              </button>
+            </div>
           </div>
-          <div id="watcher-log" class="font-mono text-xs text-slate-300 space-y-1 h-44 overflow-y-auto pr-2">
-            <div class="text-slate-500">সিট ওয়াচার স্ট্যান্ডবাই মোডে আছে। 'মনিটরিং চালু করুন' বাটনে ক্লিক করে লাইভ চেকার সক্রিয় করুন।</div>
+          <div id="watcher-log" class="font-mono text-xs text-slate-300 space-y-2 max-h-72 overflow-y-auto pr-2 scrollbar-thin">
+            <div class="text-slate-500 py-3 text-center">সিট ওয়াচার স্ট্যান্ডবাই মোডে আছে। 'মনিটরিং চালু করুন' বাটনে ক্লিক করে লাইভ চেকার সক্রিয় করুন। খালি সিট পাওয়া মাত্র সরাসরি বুকিং বাটনের কার্ড প্রদর্শিত হবে।</div>
           </div>
         </div>
 

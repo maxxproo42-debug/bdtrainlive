@@ -73,40 +73,63 @@ def get_physical_track_for_train(origin, destination, stoppages=None):
     dest_lat, dest_lng = dest_info["lat"], dest_info["lng"]
 
     # Select primary corridor
-    corridor_key = "NORTHERN_MAINLINE"
-    
-    if "Khulna" in origin or "Khulna" in destination or "Jessore" in origin or "Jessore" in destination or "Benapole" in origin or "Benapole" in destination:
-        if "Chilahati" in origin or "Chilahati" in destination or "Rajshahi" in origin or "Rajshahi" in destination or "Parbatipur" in origin or "Parbatipur" in destination:
-            corridor_key = "KHULNA_PARBATIPUR"
-    elif "Chittagong" in origin or "Chittagong" in destination or "Cox" in origin or "Cox" in destination:
-        corridor_key = "DHAKA_CHITTAGONG_COXS"
-    elif "Sylhet" in origin or "Sylhet" in destination:
-        corridor_key = "AKHAURA_SYLHET"
-    elif "Panchagarh" in origin or "Panchagarh" in destination or "Thakurgaon" in origin or "Thakurgaon" in destination or "Dinajpur" in origin or "Dinajpur" in destination:
-        if "Dhaka" in origin or "Dhaka" in destination:
-            corridor_key = "PANCHAGARH_COMBINED"
-        else:
-            corridor_key = "PANCHAGARH_BRANCH"
-    else:
-        corridor_key = "NORTHERN_MAINLINE"
+    p_branch = tracks_db.get("PANCHAGARH_BRANCH", [])
+    n_main = tracks_db.get("NORTHERN_MAINLINE", [])
+    kp = tracks_db.get("KHULNA_PARBATIPUR", [])
+    raj_branch = tracks_db.get("ABDULPUR_RAJSHAHI_BRANCH", [])
+
+    is_panchagarh_route = any(k in origin or k in destination for k in ["Panchagarh", "Thakurgaon", "Pirganj", "Dinajpur"])
+    is_rajshahi_route = ("Rajshahi" in origin or "Rajshahi" in destination)
 
     master_track = []
-    if corridor_key == "PANCHAGARH_COMBINED":
-        p_branch = tracks_db.get("PANCHAGARH_BRANCH", [])
-        n_main = tracks_db.get("NORTHERN_MAINLINE", [])
-        
-        # Parbatipur is connecting node
+
+    # 1. Specialized composite: Panchagarh <-> Rajshahi (Banglabandha Express 804 / 803)
+    if is_panchagarh_route and is_rajshahi_route:
+        if "Rajshahi" in destination:
+            # Panchagarh to Rajshahi (804): Panchagarh -> Parbatipur -> Abdulpur -> Rajshahi
+            master_track = list(p_branch) + list(reversed(kp[1353:1785])) + list(raj_branch)
+        else:
+            # Rajshahi to Panchagarh (803): Rajshahi -> Abdulpur -> Parbatipur -> Panchagarh
+            master_track = list(reversed(raj_branch)) + list(kp[1353:1785]) + list(reversed(p_branch))
+
+    # 2. Specialized composite: Dhaka <-> Rajshahi (Silkcity, Padma, Dhumketu)
+    elif ("Dhaka" in origin or "Dhaka" in destination) and is_rajshahi_route:
+        if "Rajshahi" in destination:
+            # Dhaka to Rajshahi
+            master_track = list(reversed(n_main[631:1695])) + list(raj_branch)
+        else:
+            # Rajshahi to Dhaka
+            master_track = list(reversed(raj_branch)) + list(n_main[631:1695])
+
+    # 3. Specialized composite: Khulna <-> Rajshahi (Kapotaksha, Sagardari)
+    elif ("Khulna" in origin or "Khulna" in destination) and is_rajshahi_route:
+        if "Rajshahi" in destination:
+            master_track = list(kp[:1354]) + list(raj_branch)
+        else:
+            master_track = list(reversed(raj_branch)) + list(reversed(kp[:1354]))
+
+    # 4. Specialized composite: Panchagarh <-> Dhaka (Ekota, Drutojan, Panchagarh Express)
+    elif is_panchagarh_route and ("Dhaka" in origin or "Dhaka" in destination):
+        p_idx = find_closest_index(n_main, STATIONS_DICT["Parbatipur"]["lat"], STATIONS_DICT["Parbatipur"]["lng"])
         if "Dhaka" in destination:
-            p_idx = find_closest_index(n_main, STATIONS_DICT["Parbatipur"]["lat"], STATIONS_DICT["Parbatipur"]["lng"])
             master_track = list(p_branch) + list(n_main[p_idx:])
         else:
-            p_idx = find_closest_index(n_main, STATIONS_DICT["Parbatipur"]["lat"], STATIONS_DICT["Parbatipur"]["lng"])
             reversed_branch = list(reversed(p_branch))
             reversed_main = list(reversed(n_main))
             p_idx_rev = find_closest_index(reversed_main, STATIONS_DICT["Parbatipur"]["lat"], STATIONS_DICT["Parbatipur"]["lng"])
             master_track = list(reversed_main[:p_idx_rev+1]) + list(reversed_branch)
+
+    # 5. Standard single-corridor lookups
+    elif any(k in origin or k in destination for k in ["Khulna", "Jessore", "Benapole"]):
+        master_track = kp
+    elif any(k in origin or k in destination for k in ["Chittagong", "Cox"]):
+        master_track = tracks_db.get("DHAKA_CHITTAGONG_COXS", [])
+    elif any(k in origin or k in destination for k in ["Sylhet"]):
+        master_track = tracks_db.get("AKHAURA_SYLHET", [])
+    elif is_panchagarh_route:
+        master_track = p_branch
     else:
-        master_track = tracks_db.get(corridor_key, [])
+        master_track = n_main
 
     if not master_track:
         res = []
