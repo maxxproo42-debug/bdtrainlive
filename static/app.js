@@ -355,6 +355,13 @@ function onMapTrainChange() {
     const select = document.getElementById('map-train-select');
     selectedMapTrain = select.value;
     refreshLiveMap();
+
+    // Synchronize with timeline tracking selector
+    const trackSelect = document.getElementById('tracking-train-select');
+    if (trackSelect && selectedMapTrain !== 'ALL' && trackSelect.value !== selectedMapTrain) {
+        trackSelect.value = selectedMapTrain;
+        loadTrainTimeline(selectedMapTrain, false);
+    }
 }
 
 // Fleet Category Filter Toggle
@@ -4437,11 +4444,22 @@ function viewStationOnMap(stationName) {
    TTMS 16318 & STOP-BY-STOP ROUTE TIMELINE ENGINE
    ======================================================== */
 
-async function loadTrainTimeline(trainNum) {
+async function loadTrainTimeline(trainNum, syncMap = true) {
     if (!trainNum) {
         const sel = document.getElementById('tracking-train-select');
         trainNum = sel ? sel.value : '766';
     }
+
+    // Keep map dropdown in sync if user selected from tracking dropdown
+    if (syncMap && trainNum) {
+        const mapSel = document.getElementById('map-train-select');
+        if (mapSel && mapSel.value !== trainNum) {
+            mapSel.value = trainNum;
+            selectedMapTrain = trainNum;
+            refreshLiveMap();
+        }
+    }
+
     const cardEl = document.getElementById('tracking-summary-card');
     const timelineEl = document.getElementById('timeline-container');
     if (!cardEl && !timelineEl) return;

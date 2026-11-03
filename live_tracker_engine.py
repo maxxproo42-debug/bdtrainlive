@@ -554,6 +554,19 @@ def calculate_train_live_position(train, current_dt=None):
     Calculates live GPS coordinates, status, speed, last station, and next station
     with complete transparency of whether data is Verified TTMS, Crowdsourced, or Timetable Projection.
     """
+    if isinstance(train, (str, int)):
+        train_obj = get_train_by_number(str(train))
+        if not train_obj:
+            return {
+                "status": "NOT_FOUND",
+                "is_running": False,
+                "current_speed_kmh": 0,
+                "status_text_bn": "ট্রেন খুঁজে পাওয়া যায়নি",
+                "latitude": 23.8103,
+                "longitude": 90.4125
+            }
+        train = train_obj
+
     if current_dt is None:
         current_dt = get_current_bd_time()
 
@@ -731,25 +744,31 @@ def calculate_train_live_position(train, current_dt=None):
         km_map = dict(stoppage_milestones)
 
         if not is_verified_active:
-            st_timings = train.get("station_timings")
+            st_timings = dict(train.get("station_timings") or {})
             if not st_timings:
                 st_timings = synthesize_station_timings(train, stoppage_milestones, total_track_km)
 
-            schedule = []
             dep_origin_m = parse_time_to_minutes(train.get("dep_time_24", "08:00"))
-            if stoppages[0] in st_timings and st_timings[stoppages[0]].get("dep") != "-":
-                p_m = parse_time_str_to_minutes(st_timings[stoppages[0]]["dep"])
-                if p_m:
-                    dep_origin_m = p_m
+            arr_dest_m = parse_time_to_minutes(train.get("arr_time_24", "18:00"))
+            crosses_midnight = arr_dest_m < dep_origin_m
+            if crosses_midnight and arr_dest_m < dep_origin_m:
+                arr_dest_m += 1440
+
+            # 1. Collect all valid timings with progressive day offsets
+            known_stops = {}
+            known_stops[0] = (dep_origin_m, dep_origin_m + 2, train.get("departure", "—"), train.get("departure", "—"))
+            known_stops[len(stoppages) - 1] = (arr_dest_m, arr_dest_m + 2, train.get("arrival", "—"), train.get("arrival", "—"))
 
             prev_m = dep_origin_m
             day_offset = 0
-            for s_name in stoppages:
+            for idx in range(1, len(stoppages) - 1):
+                s_name = stoppages[idx]
                 info = st_timings.get(s_name, {})
-                a_str = info.get("arr", "-")
-                d_str = info.get("dep", "-")
-                a_m = parse_time_str_to_minutes(a_str)
-                d_m = parse_time_str_to_minutes(d_str)
+                a_str = info.get("arr")
+                d_str = info.get("dep")
+                a_m = parse_time_str_to_minutes(a_str) if (a_str and a_str != "-") else None
+                d_m = parse_time_str_to_minutes(d_str) if (d_str and d_str != "-") else None
+
                 if a_m is not None:
                     if a_m < prev_m % 1440:
                         day_offset += 1440
@@ -760,16 +779,54 @@ def calculate_train_live_position(train, current_dt=None):
                         day_offset += 1440
                     d_m += day_offset
                     prev_m = d_m
-                schedule.append({
-                    "station": s_name,
-                    "arr_m": a_m if a_m is not None else d_m,
-                    "dep_m": d_m if d_m is not None else a_m,
-                    "km": km_map.get(s_name, 0.0),
-                    "arr_str": a_str,
-                    "dep_str": d_str
-                })
 
-            t_curr = current_minutes if current_minutes >= dep_origin_m else current_minutes + 1440
+                if a_m is not None or d_m is not None:
+                    final_a = a_m if a_m is not None else (d_m - 2)
+                    final_d = d_m if d_m is not None else (final_a + 2)
+                    known_stops[idx] = (final_a, max(final_a, final_d), a_str or "—", d_str or "—")
+
+            # 2. Build complete non-None schedule by interpolating any gaps
+            schedule = []
+            known_indices = sorted(known_stops.keys())
+            for idx, s_name in enumerate(stoppages):
+                if idx in known_stops:
+                    a_m, d_m, a_str, d_str = known_stops[idx]
+                    schedule.append({
+                        "station": s_name,
+                        "arr_m": a_m,
+                        "dep_m": d_m,
+                        "km": km_map.get(s_name, 0.0),
+                        "arr_str": a_str,
+                        "dep_str": d_str
+                    })
+                else:
+                    prev_k = max([k for k in known_indices if k < idx])
+                    next_k = min([k for k in known_indices if k > idx])
+                    p_dep = known_stops[prev_k][1]
+                    n_arr = known_stops[next_k][0]
+                    p_km = km_map.get(stoppages[prev_k], 0.0)
+                    n_km = km_map.get(stoppages[next_k], max(p_km + 1.0, 1.0))
+                    cur_km = km_map.get(s_name, p_km)
+
+                    if n_km > p_km:
+                        frac = min(1.0, max(0.0, (cur_km - p_km) / (n_km - p_km)))
+                    else:
+                        frac = (idx - prev_k) / (next_k - prev_k)
+
+                    interp_m = int(p_dep + frac * max(1, (n_arr - p_dep)))
+                    schedule.append({
+                        "station": s_name,
+                        "arr_m": interp_m,
+                        "dep_m": interp_m + 2,
+                        "km": cur_km,
+                        "arr_str": "—",
+                        "dep_str": "—"
+                    })
+
+            if crosses_midnight and current_minutes < dep_origin_m:
+                t_curr = current_minutes + 1440
+            else:
+                t_curr = current_minutes
 
             for i, stop in enumerate(schedule):
                 if stop["arr_m"] <= t_curr <= stop["dep_m"]:
