@@ -167,6 +167,63 @@
       .nav-links-desktop { display: none !important; }
       .nav-hamburger { display: block; }
     }
+
+    /* Result Engine Hero Header & Board Badge System */
+    .app-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+    .board-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.45rem 1.25rem;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);
+      border: 1px solid rgba(52, 211, 153, 0.55);
+      color: #ecfdf5;
+      font-size: clamp(0.75rem, 2.2vw, 1.02rem);
+      font-weight: 700;
+      margin-bottom: 1rem;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 6px 20px rgba(6, 78, 59, 0.6), 0 0 25px rgba(16, 185, 129, 0.35);
+      letter-spacing: 0.01em;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+      max-width: 98vw;
+    }
+    .board-badge:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, #065f46 0%, #047857 50%, #059669 100%);
+      border-color: #34d399;
+      box-shadow: 0 8px 25px rgba(6, 78, 59, 0.8), 0 0 35px rgba(52, 211, 153, 0.5);
+    }
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: #10b981;
+      box-shadow: 0 0 12px #10b981;
+      animation: pulse-dot 1.5s infinite;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.25); }
+    }
+    .app-title {
+      font-size: clamp(1.65rem, 4.2vw, 2.75rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #10b981 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.65rem;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+    }
   </style>
 </head>
 <body class="font-sans antialiased pb-16">
@@ -176,19 +233,12 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
         
-        <!-- Brand & Logo -->
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-bdgreen to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-900/40 cursor-pointer" onclick="switchTab('map')">
-            <i data-lucide="train" class="w-6 h-6 text-white"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-xl font-bold tracking-tight text-white cursor-pointer" onclick="switchTab('map')">রেল সেবা <span class="text-emerald-400">প্রো</span></span>
-              <a href="https://t.me/ShaifulXD" target="_blank" rel="noopener noreferrer" class="title-author-tag" title="Contact Developer on Telegram: @ShaifulXD">
-                ⚡ by ShaifulXRD ↗
-              </a>
-            </div>
-            <p class="text-xs text-slate-400 hidden sm:block">বাংলাদেশ রেলওয়ে স্মার্ট টিকেট অ্যালার্ট ও ৩ডি শিডিউল সিস্টেম</p>
+        <!-- Brand & Logo (Result Engine Style: 🚆 Rail Seba Pro ● LIVE) -->
+        <div class="nav-brand flex items-center gap-2.5 cursor-pointer" onclick="switchTab('map')">
+          <span class="nav-brand-logo text-2xl">🚆</span>
+          <div class="flex items-center">
+            <span class="nav-brand-text text-lg sm:text-xl font-extrabold tracking-tight text-white font-sans">Rail Seba Pro</span>
+            <span style="font-size:0.7rem; color:#10b981; font-weight:700; margin-left:0.45rem; padding:0.12rem 0.5rem; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); border-radius:9999px;">● LIVE</span>
           </div>
         </div>
 
@@ -221,7 +271,7 @@
           </button>
         </nav>
 
-        <!-- Right Side: Live Clock, Telegram Creator, eticket Sync & Hamburger -->
+        <!-- Right Side: Live Clock, Telegram Creator & Hamburger -->
         <div class="flex items-center gap-2">
           <!-- Live Clock Pill -->
           <div class="nav-clock-pill hidden sm:inline-flex" title="বাংলাদেশ লাইভ সময়">
@@ -233,12 +283,6 @@
           <a href="https://t.me/ShaifulXD" target="_blank" rel="noopener noreferrer" class="nav-creator-btn hidden md:inline-flex" title="Contact Developer on Telegram: @ShaifulXD">
             ⚡ by ShaifulXRD ↗
           </a>
-
-          <!-- eticket Sync Button -->
-          <button onclick="openEticketSyncModal()" id="nav-btn-eticket-sync" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow transition">
-            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-            <span id="nav-eticket-sync-text" class="hidden sm:inline">eticket সিঙ্ক</span>
-          </button>
 
           <!-- Hamburger Button for Mobile Drawer Menu -->
           <button type="button" class="nav-hamburger" onclick="toggleMobileNav()" title="মেনু খুলুন">
@@ -294,11 +338,6 @@
         <span>📖 ট্রেনের ভাড়া তালিকা ও জরুরি নিয়মাবলী</span>
       </button>
 
-      <button type="button" onclick="openEticketSyncModal(); closeMobileNav();" class="w-full text-left p-3 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center gap-2 transition">
-        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
-        <span>🔗 বাংলাদেশ রেলওয়ে (eticket) লাইভ সিঙ্ক মোডাল</span>
-      </button>
-
       <!-- Telegram Contact Link in Drawer -->
       <a href="https://t.me/ShaifulXD" target="_blank" rel="noopener noreferrer" class="nav-creator-btn w-full justify-center text-center py-2.5 mt-2 shadow-lg">
         ⚡ Contact Developer on Telegram: @ShaifulXD ↗
@@ -307,7 +346,24 @@
   </header>
 
   <!-- Main Container -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+
+    <!-- HERO HEADER: Result Engine Authentic BD Rail Style -->
+    <header class="app-header">
+      <div class="board-badge">
+        <span class="live-dot"></span>
+        <span>🇧🇩 বাংলাদেশ রেলওয়ে · ⚡ সরাসরি ৩ডি স্যাটেলাইট লাইভ ট্র্যাকিং ও স্মার্ট টিকিট পোর্টাল</span>
+      </div>
+      <h1 class="app-title">
+        Bangladesh Railway Live Tracking & Smart Ticket Portal
+        <a href="https://t.me/ShaifulXD" target="_blank" rel="noopener noreferrer" class="title-author-tag" title="Contact Developer on Telegram: @ShaifulXD">
+          by ShaifulXRD ↗
+        </a>
+      </h1>
+      <p class="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto mt-1 leading-relaxed">
+        রিয়েল-টাইম জিপিএস ট্র্যাকিং, ৩ডি রেলওয়ে ক্যামেরা, স্টেশন কোটা বিশ্লেষণ ও তাৎক্ষণিক আসন অনুসন্ধান
+      </p>
+    </header>
 
     <!-- ========================================== -->
     <!-- TAB 0: INTERACTIVE LIVE MAP TRACKER -->
@@ -1077,7 +1133,7 @@
 
       <!-- Search Results Section -->
       <div id="results-wrapper">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
             <h2 class="text-lg font-bold text-white flex items-center gap-2">
               <i data-lucide="list-ordered" class="w-5 h-5 text-emerald-400"></i>
@@ -1085,11 +1141,8 @@
             </h2>
             <span id="results-count" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">0 ট্রেন</span>
           </div>
-          <div class="flex items-center gap-2">
-            <button onclick="openEticketSyncModal()" class="px-3.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-bold text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow transition">
-              <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
-              <span id="eticket-sync-btn-label">🔗 eticket লাইভ সিঙ্ক</span>
-            </button>
+          <div class="text-xs text-slate-400">
+            লাইভ সিট ও ভাড়ার তালিকা
           </div>
         </div>
 
@@ -1598,96 +1651,11 @@
 
   </main>
 
-  <!-- Modal: Official eticket.railway.gov.bd Live Sync -->
-  <div id="eticket-sync-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4">
-    <div class="glass-card rounded-2xl max-w-lg w-full p-6 border border-emerald-500/40 shadow-2xl relative">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center">
-            <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
-          </div>
-          <div>
-            <h3 class="text-base font-bold text-white">বাংলাদেশ রেলওয়ে (eticket) লাইভ সিঙ্ক</h3>
-            <p class="text-[11px] text-slate-400">railspaapi.shohoz.com অফিসিয়াল এপিআই কানেকশন</p>
-          </div>
-        </div>
-        <button onclick="closeEticketSyncModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <!-- Current Status Banner -->
-      <div id="eticket-status-banner" class="mt-4 p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-slate-500" id="eticket-status-dot"></span>
-          <span id="eticket-status-text">সেশন স্ট্যাটাস পরীক্ষা করা হচ্ছে...</span>
-        </div>
-        <span id="eticket-user-phone" class="font-mono text-emerald-400 text-xs font-bold"></span>
-      </div>
-
-      <!-- Instructions & Mode Tabs -->
-      <div class="mt-4">
-        <div class="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs">
-          <button type="button" id="eticket-tab-btn-login" onclick="switchEticketModalTab('login')" class="font-bold text-emerald-400 border-b-2 border-emerald-400 pb-1">
-            ১. মোবাইল ও পাসওয়ার্ড দিয়ে সিঙ্ক
-          </button>
-          <button type="button" id="eticket-tab-btn-token" onclick="switchEticketModalTab('token')" class="text-slate-400 hover:text-slate-200 pb-1">
-            ২. সরাসরি Bearer টোকেন পেস্ট
-          </button>
-        </div>
-
-        <!-- Tab 1: Login Form -->
-        <form id="eticket-login-form" onsubmit="submitEticketLogin(event)" class="mt-4 space-y-3">
-          <p class="text-[11px] text-slate-400 leading-relaxed">
-            আপনার অফিসিয়াল <strong class="text-slate-200">eticket.railway.gov.bd</strong>-এর মোবাইল নম্বর ও পাসওয়ার্ড দিন। এটি সরাসরি বাংলাদেশ রেলওয়ের সার্ভারে অথেনটিকেশন করে আসল আসন সংখ্যা সিঙ্ক করবে।
-          </p>
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">রেলওয়ে রেজিস্টার্ড মোবাইল নম্বর</label>
-            <input type="text" id="eticket-mobile-input" placeholder="017xxxxxxxx বা 018xxxxxxxx" required class="w-full bg-slate-900 text-white text-sm rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 font-mono">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">eticket পাসওয়ার্ড</label>
-            <input type="password" id="eticket-password-input" placeholder="আপনার eticket পাসওয়ার্ড" required class="w-full bg-slate-900 text-white text-sm rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500">
-          </div>
-          <button type="submit" id="btn-submit-eticket-login" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-bdgreen to-emerald-600 hover:from-emerald-600 hover:to-emerald-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-2 transition">
-            <i data-lucide="log-in" class="w-4 h-4"></i>
-            <span>অফিসিয়াল সিঙ্ক সম্পন্ন করুন</span>
-          </button>
-        </form>
-
-        <!-- Tab 2: Direct Token Form -->
-        <form id="eticket-token-form" onsubmit="saveEticketDirectToken(event)" class="mt-4 space-y-3 hidden">
-          <p class="text-[11px] text-slate-400 leading-relaxed">
-            ব্রাউজারে <code class="text-cyan-300 font-mono">eticket.railway.gov.bd</code>-তে লগইন থাকা অবস্থায় Console-এ <code class="text-emerald-400 font-mono">localStorage.getItem('token')</code> রান করে প্রাপ্ত টোকেন এখানে পেস্ট করুন:
-          </p>
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">Bearer Token (JWT)</label>
-            <textarea id="eticket-direct-token-input" rows="3" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required class="w-full bg-slate-900 text-white text-xs rounded-xl p-3 border border-slate-700 focus:outline-none focus:border-emerald-500 font-mono"></textarea>
-          </div>
-          <button type="submit" id="btn-submit-direct-token" class="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-2 transition">
-            <i data-lucide="check" class="w-4 h-4"></i>
-            <span>টোকেন সক্রিয় করুন</span>
-          </button>
-        </form>
-      </div>
-
-      <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-        <span class="flex items-center gap-1">
-          <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-400"></i>
-          <span>টোকেন সম্পূর্ণ এনক্রিপ্টেড ও সুরক্ষিত</span>
-        </span>
-        <a href="https://eticket.railway.gov.bd" target="_blank" class="text-cyan-400 hover:text-cyan-300 underline font-medium">
-          eticket.railway.gov.bd খুলুন ↗
-        </a>
-      </div>
-    </div>
-  </div>
-
   <!-- Notification Toast Container -->
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 max-w-sm"></div>
 
   <!-- App Logic -->
-  <script src="/app.js?v=20261103_menu_quota_v3"></script>
+  <script src="/app.js?v=20261103_train_brand_v4"></script>
 </body>
 </html>
 

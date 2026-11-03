@@ -64,7 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initLeafletSatelliteMap();
     loadAllTrainsAndStations();
     performInitialSearch();
-    checkEticketSession();
     updateLiveNavClock();
     setInterval(updateLiveNavClock, 1000);
 
@@ -1665,18 +1664,16 @@ function renderTrainCards(trains) {
                     </div>
                 </div>
 
-                <!-- Source Badge & Live Sync Link -->
+                <!-- Source Badge & Direct Railway Booking Note -->
                 <div class="mt-2.5 pt-2 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                    <span class="${isLive ? 'text-emerald-400 font-semibold' : 'text-slate-400'} flex items-center gap-1">
-                        <i data-lucide="${isLive ? 'check-circle' : 'info'}" class="w-3.5 h-3.5 ${isLive ? 'text-emerald-400' : 'text-slate-500'}"></i>
-                        <span>${train.data_source_badge || '🔗 eticket.railway.gov.bd-তে লাইভ আসল আসন দেখুন'}</span>
+                    <span class="text-emerald-400 font-semibold flex items-center gap-1">
+                        <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span>${train.data_source_badge || '⚡ বাংলাদেশ রেলওয়ে অনলাইন কোটা ও লাইভ টিকিট ডাটা'}</span>
                     </span>
-                    ${!isLive ? `
-                        <button onclick="openEticketSyncModal()" class="text-cyan-400 hover:text-cyan-300 underline font-medium flex items-center gap-1">
-                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
-                            <span>রেলওয়ে eticket লাইভ সিঙ্ক করুন</span>
-                        </button>
-                    ` : ''}
+                    <a href="${train.booking_url}" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        <span>রেলওয়ে অফিশিয়াল পোর্টালে কাটুন ↗</span>
+                    </a>
                 </div>
 
                 <!-- Stoppage Route Accordion -->
@@ -4050,176 +4047,6 @@ function viewStationOnMap(stationName) {
         showToast(`📍 ম্যাপে ${stationName} স্টেশন জুম করা হয়েছে`, 'info');
     } else {
         showToast(`📍 ম্যাপ ভিউ চালু করা হয়েছে`, 'info');
-    }
-}
-
-/* ========================================================
-   OFFICIAL ETICKET (RAILWAY / SHOHOZ) LIVE SYNC CONTROLLER
-   ======================================================== */
-
-let isEticketAuthenticated = false;
-
-function openEticketSyncModal() {
-    const modal = document.getElementById('eticket-sync-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        checkEticketSession();
-        if (window.lucide) window.lucide.createIcons();
-    }
-}
-
-function closeEticketSyncModal() {
-    const modal = document.getElementById('eticket-sync-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-}
-
-function switchEticketModalTab(mode) {
-    const loginForm = document.getElementById('eticket-login-form');
-    const tokenForm = document.getElementById('eticket-token-form');
-    const btnLogin = document.getElementById('eticket-tab-btn-login');
-    const btnToken = document.getElementById('eticket-tab-btn-token');
-
-    if (mode === 'login') {
-        if (loginForm) loginForm.classList.remove('hidden');
-        if (tokenForm) tokenForm.classList.add('hidden');
-        if (btnLogin) btnLogin.className = 'font-bold text-emerald-400 border-b-2 border-emerald-400 pb-1';
-        if (btnToken) btnToken.className = 'text-slate-400 hover:text-slate-200 pb-1';
-    } else {
-        if (loginForm) loginForm.classList.add('hidden');
-        if (tokenForm) tokenForm.classList.remove('hidden');
-        if (btnToken) btnToken.className = 'font-bold text-emerald-400 border-b-2 border-emerald-400 pb-1';
-        if (btnLogin) btnLogin.className = 'text-slate-400 hover:text-slate-200 pb-1';
-    }
-    if (window.lucide) window.lucide.createIcons();
-}
-
-async function checkEticketSession() {
-    try {
-        const res = await fetch('/api/eticket_session');
-        const data = await res.json();
-        
-        const dotEl = document.getElementById('eticket-status-dot');
-        const textEl = document.getElementById('eticket-status-text');
-        const phoneEl = document.getElementById('eticket-user-phone');
-        const btnLabel = document.getElementById('eticket-sync-btn-label');
-
-        if (data.is_authenticated) {
-            isEticketAuthenticated = true;
-            const userPhone = (data.user && (data.user.mobile || data.user.phone)) || data.masked_token || 'সক্রিয়';
-            if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
-            if (textEl) textEl.textContent = '🟢 অফিসিয়াল eticket লাইভ কানেকশন সফলভাবে সক্রিয় রয়েছে';
-            if (phoneEl) phoneEl.textContent = `অ্যাকাউন্ট: ${userPhone}`;
-            if (btnLabel) btnLabel.innerHTML = `🟢 eticket সিঙ্কড (${userPhone.slice(-4)})`;
-        } else {
-            isEticketAuthenticated = false;
-            if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
-            if (textEl) textEl.textContent = '⚪ eticket কানেক্ট করা নেই (যাচাই করুন লিংকে অফিসিয়াল পেজ খুলবে)';
-            if (phoneEl) phoneEl.textContent = '';
-            if (btnLabel) btnLabel.textContent = '🔗 eticket লাইভ সিঙ্ক';
-        }
-    } catch (e) {
-        console.error('Error checking eticket session:', e);
-    }
-}
-
-async function submitEticketLogin(event) {
-    event.preventDefault();
-    const mobileInput = document.getElementById('eticket-mobile-input');
-    const passwordInput = document.getElementById('eticket-password-input');
-    const btn = document.getElementById('btn-submit-eticket-login');
-
-    const mobile = mobileInput ? mobileInput.value.trim() : '';
-    const password = passwordInput ? passwordInput.value : '';
-
-    if (!mobile || !password) {
-        showToast('মোবাইল নম্বর ও পাসওয়ার্ড দিন', 'error');
-        return;
-    }
-
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = `
-            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            <span>রেলওয়ে সার্ভারের সাথে সিঙ্ক হচ্ছে...</span>
-        `;
-    }
-
-    try {
-        const res = await fetch('/api/eticket_login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mobile_number: mobile, password: password })
-        });
-        const data = await res.json();
-
-        if (data.status === 'success') {
-            showToast('🎉 অফিসিয়াল বাংলাদেশ রেলওয়ে লাইভ সিঙ্ক সফল হয়েছে!', 'success');
-            closeEticketSyncModal();
-            checkEticketSession();
-            // Re-trigger active search if any
-            const searchForm = document.getElementById('search-form');
-            if (searchForm) {
-                searchForm.dispatchEvent(new Event('submit'));
-            }
-        } else {
-            showToast(`⚠️ ${data.message || 'সিঙ্ক ব্যর্থ হয়েছে'}`, 'error');
-        }
-    } catch (err) {
-        showToast(`নেটওয়ার্ক এরর: ${err.message}`, 'error');
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = `<i data-lucide="log-in" class="w-4 h-4"></i> <span>অফিসিয়াল সিঙ্ক সম্পন্ন করুন</span>`;
-            if (window.lucide) window.lucide.createIcons();
-        }
-    }
-}
-
-async function saveEticketDirectToken(event) {
-    event.preventDefault();
-    const tokenInput = document.getElementById('eticket-direct-token-input');
-    const btn = document.getElementById('btn-submit-direct-token');
-    const token = tokenInput ? tokenInput.value.trim() : '';
-
-    if (!token || token.length < 20) {
-        showToast('সঠিক JWT Bearer টোকেন দিন', 'error');
-        return;
-    }
-
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = `<span>যাচাই হচ্ছে...</span>`;
-    }
-
-    try {
-        const res = await fetch('/api/eticket_token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: token })
-        });
-        const data = await res.json();
-
-        if (data.status === 'success') {
-            showToast('🎉 টোকেন সক্রিয় ও লাইভ সিঙ্ক সফল হয়েছে!', 'success');
-            closeEticketSyncModal();
-            checkEticketSession();
-            const searchForm = document.getElementById('search-form');
-            if (searchForm) {
-                searchForm.dispatchEvent(new Event('submit'));
-            }
-        } else {
-            showToast(`⚠️ ${data.message || 'টোকেন সংরক্ষণ ব্যর্থ'}`, 'error');
-        }
-    } catch (err) {
-        showToast(`ত্রুটি: ${err.message}`, 'error');
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> <span>টোকেন সক্রিয় করুন</span>`;
-            if (window.lucide) window.lucide.createIcons();
-        }
     }
 }
 
