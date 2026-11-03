@@ -17,6 +17,7 @@ if CURRENT_DIR not in sys.path:
 # Import our train database and ticket engine
 from train_data import STATIONS, TRAINS, STATIONS_DICT, search_trains, get_train_by_number
 from ticket_watcher import check_seat_availability, scan_all_stations_ticket_availability
+from shohoz_live_client import login_to_shohoz, save_eticket_token, load_saved_token
 from live_tracker_engine import (
     calculate_train_live_position, get_all_live_trains, get_current_bd_time,
     parse_and_submit_sms, submit_passenger_checkin, submit_passenger_gps, get_station_board,
@@ -91,6 +92,31 @@ class BDRailAPIHandler(SimpleHTTPRequestHandler):
             self.send_json_response(result)
             return
 
+        # API: Official Bangladesh Railway (Shohoz) Login & Token Sync
+        elif path == "/api/eticket_login":
+            mobile = payload.get("mobile_number", "")
+            password = payload.get("password", "")
+            if not mobile or not password:
+                self.send_json_response({"status": "error", "message": "মোবাইল নম্বর এবং পাসওয়ার্ড আবশ্যক।"}, status=400)
+                return
+            result = login_to_shohoz(mobile, password)
+            self.send_json_response(result)
+            return
+
+        # API: Directly Save or Update Official eticket Bearer Token
+        elif path == "/api/eticket_token":
+            token = payload.get("token", "")
+            user = payload.get("user", {})
+            if not token or len(str(token).strip()) < 20:
+                self.send_json_response({"status": "error", "message": "সঠিক অথরাইজেশন টোকেন প্রদান করুন।"}, status=400)
+                return
+            success = save_eticket_token(str(token).strip(), user)
+            if success:
+                self.send_json_response({"status": "success", "message": "বাংলাদেশ রেলওয়ে eticket টোকেন সফলভাবে সিঙ্ক হয়েছে!"})
+            else:
+                self.send_json_response({"status": "error", "message": "টোকেন সংরক্ষণ ব্যর্থ হয়েছে।"}, status=500)
+            return
+
         self.send_json_response({"status": "error", "message": "Endpoint not found"}, status=404)
 
     def do_GET(self):
@@ -106,6 +132,25 @@ class BDRailAPIHandler(SimpleHTTPRequestHandler):
                 "uptime": "online",
                 "server_time": get_current_bd_time().strftime("%Y-%m-%d %I:%M:%S %p")
             })
+            return
+
+        # API: Official eticket Session Status
+        elif path == "/api/eticket_session":
+            token, user = load_saved_token()
+            if token:
+                masked = token[:6] + "..." + token[-4:] if len(token) > 10 else "***"
+                self.send_json_response({
+                    "status": "success",
+                    "is_authenticated": True,
+                    "masked_token": masked,
+                    "user": user or {}
+                })
+            else:
+                self.send_json_response({
+                    "status": "unauthenticated",
+                    "is_authenticated": False,
+                    "message": "eticket সেশন সংযুক্ত নেই।"
+                })
             return
 
         # API: Get Station List

@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initLeafletSatelliteMap();
     loadAllTrainsAndStations();
     performInitialSearch();
+    checkEticketSession();
 
     // Auto-refresh live map every 8 seconds
     mapAutoRefreshInterval = setInterval(() => {
@@ -1530,23 +1531,42 @@ async function handleSearch(e) {
 function renderTrainCards(trains) {
     const container = document.getElementById('train-cards-container');
     container.innerHTML = trains.map((train, cardIdx) => {
-        const hasSeats = train.total_available > 0;
-        const seatBadgeClass = hasSeats 
-            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
-            : 'bg-rose-500/10 text-rose-400 border border-rose-500/30';
-        const seatBadgeText = hasSeats 
-            ? `${train.total_available} সিট খালি আছে` 
-            : 'সকল সিট বুকড';
+        const isLive = train.is_live_synced === true;
+        const hasKnownTotal = train.total_available !== null && train.total_available !== undefined;
+        const hasSeats = hasKnownTotal && train.total_available > 0;
+
+        let seatBadgeClass, seatBadgeText;
+        if (isLive) {
+            if (hasSeats) {
+                seatBadgeClass = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+                seatBadgeText = `🟢 ${train.total_available}টি সিট খালি (অফিসিয়াল)`;
+            } else {
+                seatBadgeClass = 'bg-rose-500/20 text-rose-300 border border-rose-500/40';
+                seatBadgeText = '🔴 সকল সিট বুকড (Sold Out)';
+            }
+        } else {
+            seatBadgeClass = 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40';
+            seatBadgeText = '🔗 eticket-এ আসন দেখুন';
+        }
 
         const classesHtml = Object.keys(train.seats).map(cls => {
             const info = train.seats[cls];
-            const isAvail = info.available > 0;
+            const hasCount = info.available !== null && info.available !== undefined;
+            const isAvail = hasCount && info.available > 0;
+
+            let availDisplay;
+            if (hasCount) {
+                availDisplay = isAvail ? `${info.available} সিট` : '০ (বুকড)';
+            } else {
+                availDisplay = 'যাচাই করুন';
+            }
+
             return `
                 <div class="p-2.5 rounded-lg border ${isAvail ? 'bg-emerald-950/40 border-emerald-700/50' : 'bg-slate-900 border-slate-800'} flex flex-col justify-between">
                     <div class="flex items-center justify-between text-xs">
                         <span class="font-bold text-slate-200">${cls}</span>
-                        <span class="${isAvail ? 'text-emerald-400 font-extrabold' : 'text-slate-500'}">
-                            ${isAvail ? `${info.available} সিট` : '০'}
+                        <span class="${isAvail ? 'text-emerald-400 font-extrabold' : (hasCount ? 'text-rose-400 font-bold' : 'text-cyan-400 font-semibold')}">
+                            ${availDisplay}
                         </span>
                     </div>
                     <div class="text-[11px] text-slate-400 mt-1 font-mono">৳${info.fare}</div>
@@ -1640,6 +1660,20 @@ function renderTrainCards(trains) {
                             <span>সহজে বুক করুন</span>
                         </a>
                     </div>
+                </div>
+
+                <!-- Source Badge & Live Sync Link -->
+                <div class="mt-2.5 pt-2 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                    <span class="${isLive ? 'text-emerald-400 font-semibold' : 'text-slate-400'} flex items-center gap-1">
+                        <i data-lucide="${isLive ? 'check-circle' : 'info'}" class="w-3.5 h-3.5 ${isLive ? 'text-emerald-400' : 'text-slate-500'}"></i>
+                        <span>${train.data_source_badge || '🔗 eticket.railway.gov.bd-তে লাইভ আসল আসন দেখুন'}</span>
+                    </span>
+                    ${!isLive ? `
+                        <button onclick="openEticketSyncModal()" class="text-cyan-400 hover:text-cyan-300 underline font-medium flex items-center gap-1">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                            <span>রেলওয়ে eticket লাইভ সিঙ্ক করুন</span>
+                        </button>
+                    ` : ''}
                 </div>
 
                 <!-- Stoppage Route Accordion -->
@@ -3854,9 +3888,28 @@ function renderStationScanCards(stations, destStation, dateStr, trainNum, trainN
                 else if (clsKey === 'AC_CABIN' || clsKey === 'AC_S') clsLabel = 'এসি সিট';
                 else if (clsKey === 'SHOVAN') clsLabel = 'শোভন';
 
-                const avail = clsInfo.available || 0;
+                const hasCount = clsInfo.available !== null && clsInfo.available !== undefined;
+                const avail = hasCount ? clsInfo.available : 0;
                 const fare = clsInfo.fare || 0;
-                const isAvail = avail > 0;
+                const isAvail = hasCount && avail > 0;
+
+                let seatDisplay = "";
+                if (isPassed) {
+                    seatDisplay = "০টি";
+                } else if (hasCount) {
+                    seatDisplay = isAvail ? `${avail}টি সিট` : "০ (বুকড)";
+                } else {
+                    seatDisplay = "যাচাই করুন";
+                }
+
+                let subStatus = "";
+                if (isPassed) {
+                    subStatus = "সময় পার";
+                } else if (hasCount) {
+                    subStatus = isAvail ? "উপলব্ধ" : "শেষ";
+                } else {
+                    subStatus = "অফিসিয়াল লিংক";
+                }
 
                 classesHtml += `
                     <div class="p-2.5 rounded-xl ${isPassed ? 'bg-slate-950/60 border border-slate-800/80' : (isAvail ? 'bg-emerald-950/40 border border-emerald-500/30' : 'bg-slate-900/60 border border-slate-800')} flex items-center justify-between">
@@ -3865,11 +3918,11 @@ function renderStationScanCards(stations, destStation, dateStr, trainNum, trainN
                             <div class="text-[10px] text-slate-400 font-mono">ভাড়া: ৳${fare}</div>
                         </div>
                         <div class="text-right">
-                            <span class="text-xs font-black ${isPassed ? 'text-slate-500' : (isAvail ? 'text-emerald-400 font-mono' : 'text-rose-400')}">
-                                ${isPassed ? '০টি' : avail + 'টি সিট'}
+                            <span class="text-xs font-black ${isPassed ? 'text-slate-500' : (isAvail ? 'text-emerald-400 font-mono' : (hasCount ? 'text-rose-400' : 'text-cyan-400'))}">
+                                ${seatDisplay}
                             </span>
-                            <div class="text-[9px] ${isPassed ? 'text-slate-600' : (isAvail ? 'text-emerald-300' : 'text-slate-500')}">
-                                ${isPassed ? 'সময় পার' : (clsInfo.status_bn || (isAvail ? 'উপলব্ধ' : 'শেষ'))}
+                            <div class="text-[9px] ${isPassed ? 'text-slate-600' : (isAvail ? 'text-emerald-300' : (hasCount ? 'text-slate-500' : 'text-cyan-400/80'))}">
+                                ${clsInfo.status_bn || subStatus}
                             </div>
                         </div>
                     </div>
@@ -3911,7 +3964,7 @@ function renderStationScanCards(stations, destStation, dateStr, trainNum, trainN
                         <span class="px-3 py-1 rounded-xl text-xs font-bold border ${stn.badge_class}">
                             ${stn.quota_badge}
                         </span>
-                        ${!isPassed ? `
+                        ${!isPassed && stn.total_available !== null && stn.total_available !== undefined ? `
                             <span class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 text-xs font-black font-mono ${hasSeats ? 'text-emerald-400' : 'text-slate-400'}">
                                 মোট: ${stn.total_available}টি
                             </span>
@@ -3994,5 +4047,175 @@ function viewStationOnMap(stationName) {
         showToast(`📍 ম্যাপে ${stationName} স্টেশন জুম করা হয়েছে`, 'info');
     } else {
         showToast(`📍 ম্যাপ ভিউ চালু করা হয়েছে`, 'info');
+    }
+}
+
+/* ========================================================
+   OFFICIAL ETICKET (RAILWAY / SHOHOZ) LIVE SYNC CONTROLLER
+   ======================================================== */
+
+let isEticketAuthenticated = false;
+
+function openEticketSyncModal() {
+    const modal = document.getElementById('eticket-sync-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        checkEticketSession();
+        if (window.lucide) window.lucide.createIcons();
+    }
+}
+
+function closeEticketSyncModal() {
+    const modal = document.getElementById('eticket-sync-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function switchEticketModalTab(mode) {
+    const loginForm = document.getElementById('eticket-login-form');
+    const tokenForm = document.getElementById('eticket-token-form');
+    const btnLogin = document.getElementById('eticket-tab-btn-login');
+    const btnToken = document.getElementById('eticket-tab-btn-token');
+
+    if (mode === 'login') {
+        if (loginForm) loginForm.classList.remove('hidden');
+        if (tokenForm) tokenForm.classList.add('hidden');
+        if (btnLogin) btnLogin.className = 'font-bold text-emerald-400 border-b-2 border-emerald-400 pb-1';
+        if (btnToken) btnToken.className = 'text-slate-400 hover:text-slate-200 pb-1';
+    } else {
+        if (loginForm) loginForm.classList.add('hidden');
+        if (tokenForm) tokenForm.classList.remove('hidden');
+        if (btnToken) btnToken.className = 'font-bold text-emerald-400 border-b-2 border-emerald-400 pb-1';
+        if (btnLogin) btnLogin.className = 'text-slate-400 hover:text-slate-200 pb-1';
+    }
+    if (window.lucide) window.lucide.createIcons();
+}
+
+async function checkEticketSession() {
+    try {
+        const res = await fetch('/api/eticket_session');
+        const data = await res.json();
+        
+        const dotEl = document.getElementById('eticket-status-dot');
+        const textEl = document.getElementById('eticket-status-text');
+        const phoneEl = document.getElementById('eticket-user-phone');
+        const btnLabel = document.getElementById('eticket-sync-btn-label');
+
+        if (data.is_authenticated) {
+            isEticketAuthenticated = true;
+            const userPhone = (data.user && (data.user.mobile || data.user.phone)) || data.masked_token || 'সক্রিয়';
+            if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+            if (textEl) textEl.textContent = '🟢 অফিসিয়াল eticket লাইভ কানেকশন সফলভাবে সক্রিয় রয়েছে';
+            if (phoneEl) phoneEl.textContent = `অ্যাকাউন্ট: ${userPhone}`;
+            if (btnLabel) btnLabel.innerHTML = `🟢 eticket সিঙ্কড (${userPhone.slice(-4)})`;
+        } else {
+            isEticketAuthenticated = false;
+            if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+            if (textEl) textEl.textContent = '⚪ eticket কানেক্ট করা নেই (যাচাই করুন লিংকে অফিসিয়াল পেজ খুলবে)';
+            if (phoneEl) phoneEl.textContent = '';
+            if (btnLabel) btnLabel.textContent = '🔗 eticket লাইভ সিঙ্ক';
+        }
+    } catch (e) {
+        console.error('Error checking eticket session:', e);
+    }
+}
+
+async function submitEticketLogin(event) {
+    event.preventDefault();
+    const mobileInput = document.getElementById('eticket-mobile-input');
+    const passwordInput = document.getElementById('eticket-password-input');
+    const btn = document.getElementById('btn-submit-eticket-login');
+
+    const mobile = mobileInput ? mobileInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
+
+    if (!mobile || !password) {
+        showToast('মোবাইল নম্বর ও পাসওয়ার্ড দিন', 'error');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `
+            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <span>রেলওয়ে সার্ভারের সাথে সিঙ্ক হচ্ছে...</span>
+        `;
+    }
+
+    try {
+        const res = await fetch('/api/eticket_login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mobile_number: mobile, password: password })
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            showToast('🎉 অফিসিয়াল বাংলাদেশ রেলওয়ে লাইভ সিঙ্ক সফল হয়েছে!', 'success');
+            closeEticketSyncModal();
+            checkEticketSession();
+            // Re-trigger active search if any
+            const searchForm = document.getElementById('search-form');
+            if (searchForm) {
+                searchForm.dispatchEvent(new Event('submit'));
+            }
+        } else {
+            showToast(`⚠️ ${data.message || 'সিঙ্ক ব্যর্থ হয়েছে'}`, 'error');
+        }
+    } catch (err) {
+        showToast(`নেটওয়ার্ক এরর: ${err.message}`, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i data-lucide="log-in" class="w-4 h-4"></i> <span>অফিসিয়াল সিঙ্ক সম্পন্ন করুন</span>`;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+}
+
+async function saveEticketDirectToken(event) {
+    event.preventDefault();
+    const tokenInput = document.getElementById('eticket-direct-token-input');
+    const btn = document.getElementById('btn-submit-direct-token');
+    const token = tokenInput ? tokenInput.value.trim() : '';
+
+    if (!token || token.length < 20) {
+        showToast('সঠিক JWT Bearer টোকেন দিন', 'error');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span>যাচাই হচ্ছে...</span>`;
+    }
+
+    try {
+        const res = await fetch('/api/eticket_token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token })
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            showToast('🎉 টোকেন সক্রিয় ও লাইভ সিঙ্ক সফল হয়েছে!', 'success');
+            closeEticketSyncModal();
+            checkEticketSession();
+            const searchForm = document.getElementById('search-form');
+            if (searchForm) {
+                searchForm.dispatchEvent(new Event('submit'));
+            }
+        } else {
+            showToast(`⚠️ ${data.message || 'টোকেন সংরক্ষণ ব্যর্থ'}`, 'error');
+        }
+    } catch (err) {
+        showToast(`ত্রুটি: ${err.message}`, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> <span>টোকেন সক্রিয় করুন</span>`;
+            if (window.lucide) window.lucide.createIcons();
+        }
     }
 }

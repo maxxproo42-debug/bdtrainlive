@@ -18,6 +18,7 @@ if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
 from train_data import TRAINS, STATIONS_DICT, search_trains, get_train_by_number
+from shohoz_live_client import fetch_shohoz_live_trips, format_date_for_shohoz, load_saved_token
 
 def parse_time_str_to_minutes(time_str):
     """Parses 'HH:MM AM/PM' to minutes from midnight"""
@@ -133,29 +134,56 @@ def check_seat_availability(origin, destination, date_of_journey, train_number=N
                 "time": s_sched["dep"] or s_sched["arr"]
             })
 
-        # Realistic seat count generator
-        date_hash = sum(ord(c) for c in (str(date_of_journey) + str(train["number"]) + real_origin))
-        random.seed(date_hash)
+        # Formatted Date for Bangladesh Railway (DD-Mon-YYYY)
+        formatted_doj = format_date_for_shohoz(date_of_journey)
+
+        # 100% Real-Time Shohoz Live eticket Sync
+        live_shohoz_data = fetch_shohoz_live_trips(real_origin, real_dest, formatted_doj)
+        is_live_synced = live_shohoz_data.get("is_live_synced", False)
 
         seat_data = {}
         total_available = 0
+        matched_trip = None
 
-        for cls in train["classes"]:
-            fare = train["fares"].get(cls, 350)
-            seat_roll = (date_hash % 100) + random.randint(0, 40)
-            if seat_roll > 80:
-                avail = random.randint(2, 28)
-            elif seat_roll > 60:
-                avail = random.randint(1, 6)
-            else:
-                avail = 0
+        if is_live_synced:
+            # Find matching trip in official Shohoz API response
+            for raw_t in live_shohoz_data.get("raw_trains", []):
+                t_num = str(raw_t.get("trip_number") or raw_t.get("train_number") or "")
+                t_name = str(raw_t.get("train_name") or "").lower()
+                if str(train["number"]) in t_num or train["name_en"].lower() in t_name or train["name_bn"] in t_name:
+                    matched_trip = raw_t
+                    break
 
-            seat_data[cls] = {
-                "available": avail,
-                "fare": fare,
-                "status": "AVAILABLE" if avail > 0 else "SOLD_OUT"
-            }
-            total_available += avail
+        if matched_trip:
+            # 100% Verified Real Official Seats from Bangladesh Railway Database
+            seat_types = matched_trip.get("seat_types", [])
+            for st in seat_types:
+                cls_key = st.get("type", "S_CHAIR")
+                online_seats = st.get("seat_counts", {}).get("online", 0)
+                offline_seats = st.get("seat_counts", {}).get("offline", 0)
+                avail = online_seats + offline_seats
+                fare = st.get("fare", train["fares"].get(cls_key, 350))
+                seat_data[cls_key] = {
+                    "available": avail,
+                    "online": online_seats,
+                    "offline": offline_seats,
+                    "fare": fare,
+                    "status": "AVAILABLE" if avail > 0 else "SOLD_OUT",
+                    "status_bn": f"{avail}টি আসন খালি" if avail > 0 else "আসন শেষ (Sold Out)"
+                }
+                total_available += avail
+            data_badge = "🟢 বাংলাদেশ রেলওয়ে (eticket API) থেকে ১০০% লাইভ সিঙ্কড"
+        else:
+            # Official Schedule & Authentic Fares without fake numbers
+            for cls in train["classes"]:
+                fare = train["fares"].get(cls, 350)
+                seat_data[cls] = {
+                    "available": None,  # Honest null - no fake numbers!
+                    "fare": fare,
+                    "status": "CHECK_OFFICIAL",
+                    "status_bn": "লাইভ দেখতে ক্লিক করুন"
+                }
+            data_badge = "🔗 eticket.railway.gov.bd-তে লাইভ আসল আসন দেখুন"
 
         results.append({
             "number": train["number"],
@@ -175,11 +203,13 @@ def check_seat_availability(origin, destination, date_of_journey, train_number=N
             "train_departure": train["departure"],
             "train_arrival": train["arrival"],
             "off_day": train["off_day"],
-            "date": date_of_journey,
+            "date": formatted_doj,
             "seats": seat_data,
-            "total_available": total_available,
+            "total_available": total_available if matched_trip else None,
+            "is_live_synced": is_live_synced and bool(matched_trip),
+            "data_source_badge": data_badge,
             "ttms_code": train.get("ttms_code", str(train["number"])),
-            "booking_url": f"https://eticket.railway.gov.bd/booking/train/search?fromcity={real_origin}&tocity={real_dest}&doj={date_of_journey}&class=S_CHAIR"
+            "booking_url": f"https://eticket.railway.gov.bd/booking/train/search?fromcity={real_origin.upper()}&tocity={real_dest.upper()}&doj={formatted_doj}&class=S_CHAIR"
         })
 
     # Sort results by departure time
@@ -298,6 +328,20 @@ def scan_all_stations_ticket_availability(train_number, date_of_journey, dest_st
 
     major_junctions = ["Dhaka", "Chilahati", "Parbatipur", "Saidpur", "Santahar", "Rajshahi", "Dinajpur", "Khulna", "Chattogram", "Ishwardi", "Panchagarh"]
 
+    formatted_doj = format_date_for_shohoz(date_of_journey)
+
+    # 100% Real-Time Shohoz Live eticket Sync if available
+    live_shohoz_trip = None
+    if from_station and dest_station:
+        live_shohoz_res = fetch_shohoz_live_trips(from_station, dest_station, formatted_doj)
+        if live_shohoz_res.get("is_live_synced"):
+            for raw_t in live_shohoz_res.get("raw_trains", []):
+                t_num = str(raw_t.get("trip_number") or raw_t.get("train_number") or "")
+                t_name = str(raw_t.get("train_name") or "").lower()
+                if str(train["number"]) in t_num or train["name_en"].lower() in t_name or train["name_bn"] in t_name:
+                    live_shohoz_trip = raw_t
+                    break
+
     for idx, station in enumerate(boarding_stations):
         sched = get_station_schedule(train, station)
         dep_time = sched["dep"] or train["departure"]
@@ -305,76 +349,84 @@ def scan_all_stations_ticket_availability(train_number, date_of_journey, dest_st
         is_passed = (is_today and (station in passed_station_names))
         is_next_stop = (is_today and is_running_now and (station == next_station_name))
         is_major = any(j.lower() in station.lower() for j in major_junctions)
-        base_quota_mult = 1.6 if is_major else 0.8
-
-        seed_val = sum(ord(c) for c in (str(date_of_journey) + str(train["number"]) + station + str(dest_station)))
-        random.seed(seed_val)
 
         classes_data = {}
         station_total_seats = 0
+        is_target_station = from_station and (station.lower() == from_station.lower())
+        has_real_shohoz_seats = False
 
-        for cls in train.get("classes", ["SHOVAN_CHAIR", "SNIGDHA"]):
-            fare = train.get("fares", {}).get(cls, 450)
-            progress_ratio = max(0.2, (dest_idx - idx) / max(1, len(stoppages) - 1))
-            adj_fare = int(fare * progress_ratio)
-            adj_fare = max(115, round(adj_fare / 10) * 10)
-
-            if is_passed:
-                seats = 0
-                status_str = "DEPARTED"
-                status_bn = "ট্রেন চলে গেছে"
-            else:
-                roll = (seed_val % 100) + random.randint(0, 50)
-                if roll > 80:
-                    seats = int(random.randint(6, 32) * base_quota_mult)
-                elif roll > 45:
-                    seats = int(random.randint(2, 10) * base_quota_mult)
-                else:
-                    seats = 0
-                status_str = "AVAILABLE" if seats > 3 else ("LIMITED" if seats > 0 else "SOLD_OUT")
-                status_bn = "উপলব্ধ" if seats > 3 else ("সীমিত আসন" if seats > 0 else "শেষ")
-
-            classes_data[cls] = {
-                "available": seats,
-                "fare": adj_fare,
-                "status": status_str,
-                "status_bn": status_bn
-            }
-            if not is_passed:
-                station_total_seats += seats
-
-        if not is_passed:
-            total_train_available += station_total_seats
-            upcoming_count += 1
+        if is_target_station and live_shohoz_trip:
+            has_real_shohoz_seats = True
+            seat_types = live_shohoz_trip.get("seat_types", [])
+            for st in seat_types:
+                cls_key = st.get("type", "S_CHAIR")
+                online_seats = st.get("seat_counts", {}).get("online", 0)
+                offline_seats = st.get("seat_counts", {}).get("offline", 0)
+                avail = online_seats + offline_seats
+                fare = st.get("fare", train.get("fares", {}).get(cls_key, 350))
+                classes_data[cls_key] = {
+                    "available": avail,
+                    "online": online_seats,
+                    "offline": offline_seats,
+                    "fare": fare,
+                    "status": "AVAILABLE" if avail > 0 else "SOLD_OUT",
+                    "status_bn": f"{avail}টি আসন খালি" if avail > 0 else "আসন শেষ (Sold Out)"
+                }
+                station_total_seats += avail
         else:
-            passed_count += 1
+            for cls in train.get("classes", ["SHOVAN_CHAIR", "SNIGDHA"]):
+                fare = train.get("fares", {}).get(cls, 450)
+                progress_ratio = max(0.2, (dest_idx - idx) / max(1, len(stoppages) - 1))
+                adj_fare = int(fare * progress_ratio)
+                adj_fare = max(115, round(adj_fare / 10) * 10)
 
-        # Badges and Status
+                if is_passed:
+                    seats = 0
+                    status_str = "DEPARTED"
+                    status_bn = "ট্রেন চলে গেছে"
+                else:
+                    seats = None
+                    status_str = "CHECK_OFFICIAL"
+                    status_bn = "লাইভ দেখতে ক্লিক করুন"
+
+                classes_data[cls] = {
+                    "available": seats,
+                    "fare": adj_fare,
+                    "status": status_str,
+                    "status_bn": status_bn
+                }
+
         if is_passed:
             quota_badge = "⚪ ট্রেন স্টেশন ছেড়ে গেছে (অতিক্রান্ত)"
             badge_class = "bg-slate-800/90 text-slate-400 border-slate-700"
             status_text_bn = "অতিক্রান্ত (Departed)"
             can_book = False
+            passed_count += 1
+        elif has_real_shohoz_seats:
+            if station_total_seats > 0:
+                quota_badge = f"🟢 লাইভ সিঙ্কড ({station_total_seats}টি খালি)"
+                badge_class = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                status_text_bn = "আসন উপলব্ধ"
+                can_book = True
+            else:
+                quota_badge = "🔴 আসন বিক্রি শেষ (Sold Out)"
+                badge_class = "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                status_text_bn = "আসন শেষ"
+                can_book = False
+            total_train_available += station_total_seats
+            upcoming_count += 1
         elif is_next_stop:
-            quota_badge = f"📍 পরবর্তী স্টেশন - {station_total_seats}টি সিট খালি" if station_total_seats > 0 else "📍 পরবর্তী স্টেশন (আসন পূর্ণ)"
+            quota_badge = "📍 পরবর্তী স্টেশন (আসন্ন)"
             badge_class = "bg-cyan-500/20 text-cyan-300 border-cyan-500/50"
             status_text_bn = "পরবর্তী আসন্ন স্টপ"
-            can_book = (station_total_seats > 0)
-        elif station_total_seats > 10:
-            quota_badge = f"🟢 টিকিট উপলব্ধ ({station_total_seats}টি)"
-            badge_class = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-            status_text_bn = "আসন উপলব্ধ"
             can_book = True
-        elif station_total_seats > 0:
-            quota_badge = f"🟡 সীমিত টিকিট ({station_total_seats}টি)"
-            badge_class = "bg-amber-500/20 text-amber-300 border-amber-500/40"
-            status_text_bn = "সীমিত আসন"
-            can_book = True
+            upcoming_count += 1
         else:
-            quota_badge = "🔴 আসন বিক্রি শেষ"
-            badge_class = "bg-rose-500/20 text-rose-300 border-rose-500/40"
-            status_text_bn = "আসন শেষ"
-            can_book = False
+            quota_badge = "🔗 eticket এ আসন দেখুন"
+            badge_class = "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
+            status_text_bn = "যাচাই করুন"
+            can_book = True
+            upcoming_count += 1
 
         stn_bn = STATIONS_DICT.get(station, {}).get("name_bn", station)
         dest_bn = STATIONS_DICT.get(dest_station, {}).get("name_bn", dest_station)
@@ -387,15 +439,16 @@ def scan_all_stations_ticket_availability(train_number, date_of_journey, dest_st
             "destination": dest_station,
             "destination_bn": dest_bn,
             "classes": classes_data,
-            "total_available": station_total_seats,
+            "total_available": station_total_seats if has_real_shohoz_seats else None,
             "quota_badge": quota_badge,
             "badge_class": badge_class,
             "is_major_station": is_major,
             "is_passed": is_passed,
             "is_next_stop": is_next_stop,
             "can_book": can_book,
+            "has_real_shohoz_seats": has_real_shohoz_seats,
             "status_text_bn": status_text_bn,
-            "booking_url": f"https://eticket.railway.gov.bd/booking/train/search?fromcity={station}&tocity={dest_station}&doj={date_of_journey}&class=S_CHAIR"
+            "booking_url": f"https://eticket.railway.gov.bd/booking/train/search?fromcity={station.upper()}&tocity={dest_station.upper()}&doj={formatted_doj}&class=S_CHAIR"
         })
 
     live_summary = None
