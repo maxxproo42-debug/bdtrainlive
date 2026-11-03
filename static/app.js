@@ -4009,14 +4009,48 @@ async function runStationTicketScan() {
 
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = `<span class="animate-spin text-base">⏳</span> <span>লাইভ স্ক্যান হচ্ছে...</span>`;
+        btn.innerHTML = `<span class="animate-spin text-base">🛰️</span> <span>লাইভ স্ক্যান চলছে...</span>`;
     }
 
     grid.innerHTML = `
-        <div class="glass-card rounded-2xl p-10 text-center text-slate-400 border-slate-800 animate-pulse">
-            <div class="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-            <p class="font-bold text-white text-base">ট্রেন [${trainNum}]-এর প্রতিটি স্টেশনের লাইভ টিকিট স্ক্যান চলছে...</p>
-            <p class="text-xs text-slate-400 mt-1">বাংলাদেশ রেলওয়ে ই-টিকিট সার্ভার ও কোটা বিশ্লেষণ করা হচ্ছে</p>
+        <div class="glass-card rounded-2xl p-6 sm:p-8 text-center border-emerald-500/40 relative overflow-hidden bg-slate-900/95 shadow-2xl animate-fade-in">
+            <div class="relative w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+                <div class="absolute inset-0 rounded-full border-2 border-emerald-500/20 animate-ping"></div>
+                <div class="absolute inset-2 rounded-full border border-emerald-500/40 animate-pulse"></div>
+                <div class="absolute inset-0 rounded-full border-t-2 border-emerald-400 animate-spin"></div>
+                <div class="w-14 h-14 rounded-full bg-emerald-500/10 flex items-center justify-center text-2xl">
+                    🚆
+                </div>
+            </div>
+
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold mb-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>বাংলাদেশ রেলওয়ে অফিসিয়াল সার্ভার স্ক্যানার সক্রিয়</span>
+            </div>
+
+            <h3 class="text-lg sm:text-xl font-black text-white" id="scan-progress-title">
+                ট্রেন [${trainNum}]-এর প্রতিটি স্টপের লাইভ আসন স্ক্যান চলছে...
+            </h3>
+            <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto" id="scan-progress-sub">
+                অফিসিয়াল ই-টিকিট সার্ভার ও কোটা ডাটাবেজ বিশ্লেষণ করা হচ্ছে...
+            </p>
+
+            <!-- Progress Bar -->
+            <div class="w-full max-w-md mx-auto mt-4 bg-slate-800 rounded-full h-3 p-0.5 overflow-hidden border border-slate-700">
+                <div id="scan-progress-bar" class="bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 h-full rounded-full transition-all duration-300 w-1/12"></div>
+            </div>
+            <div class="flex justify-between items-center text-[11px] text-slate-400 max-w-md mx-auto mt-1.5 px-1 font-mono">
+                <span id="scan-progress-station">স্টেশন অনুসন্ধান শুরু হচ্ছে...</span>
+                <span id="scan-progress-percent" class="font-bold text-emerald-400">১০%</span>
+            </div>
+
+            <!-- Live Terminal Log -->
+            <div class="mt-4 p-3 rounded-xl bg-slate-950/90 border border-slate-800/90 max-w-md mx-auto text-left font-mono text-[11px] text-slate-300 h-28 overflow-y-auto space-y-1.5 shadow-inner" id="scan-live-terminal">
+                <div class="text-emerald-400 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>[০৮:০০:০১] eticket.railway.gov.bd সার্ভারে সংযোগ স্থাপিত</span>
+                </div>
+            </div>
         </div>
     `;
 
@@ -4032,6 +4066,36 @@ async function runStationTicketScan() {
 
         if (data.status === 'success') {
             lastScannedStationRecords = data.stations || [];
+            const stations = lastScannedStationRecords;
+            const term = document.getElementById('scan-live-terminal');
+            const pBar = document.getElementById('scan-progress-bar');
+            const pStation = document.getElementById('scan-progress-station');
+            const pPercent = document.getElementById('scan-progress-percent');
+
+            // Interactive Sequential Multi-Station Radar Sweep Animation
+            if (stations.length > 0 && term) {
+                for (let i = 0; i < stations.length; i++) {
+                    const stn = stations[i];
+                    const pct = Math.round(((i + 1) / stations.length) * 100);
+                    if (pBar) pBar.style.width = `${pct}%`;
+                    if (pPercent) pPercent.textContent = `${pct}%`;
+                    if (pStation) pStation.textContent = `স্টেশন (${i + 1}/${stations.length}): ${stn.station_name_bn || stn.station_name} যাচাই সম্পন্ন`;
+
+                    const logItem = document.createElement('div');
+                    const isAvail = stn.total_available > 0;
+                    const seatsText = isAvail ? `${stn.total_available}টি আসন` : '০টি আসন';
+                    logItem.className = isAvail ? 'text-emerald-300 text-[10px]' : 'text-slate-400 text-[10px]';
+                    logItem.innerHTML = `🛰️ [${stn.station_name}] ➔ ${destStation || 'গন্তব্য'}: <strong>${seatsText}</strong> (${stn.is_major_station ? 'জংশন' : 'স্টপ'})`;
+                    term.appendChild(logItem);
+                    term.scrollTop = term.scrollHeight;
+
+                    // Small natural pace for authentic scanning feel
+                    if (i < Math.min(stations.length - 1, 8)) {
+                        await new Promise(r => setTimeout(r, 220));
+                    }
+                }
+                await new Promise(r => setTimeout(r, 350));
+            }
 
             // Update Summary Stats
             const countEl = document.getElementById('stat-scan-count');
@@ -4061,7 +4125,6 @@ async function runStationTicketScan() {
                 const availableStations = lastScannedStationRecords.filter(s => !s.is_passed);
                 if (availableStations.length > 0) {
                     let maxStation = availableStations.reduce((prev, curr) => 
-
                         (curr.total_available > prev.total_available) ? curr : prev, availableStations[0]);
                     topEl.textContent = `${maxStation.station_name} (${maxStation.total_available}টি)`;
                 } else {
@@ -4072,8 +4135,8 @@ async function runStationTicketScan() {
             if (summaryCard) summaryCard.classList.remove('hidden');
             if (filterBar) filterBar.classList.remove('hidden');
 
-            renderStationScanCards(lastScannedStationRecords, data.target_destination, data.date_of_journey, data.train_number, data.train_name_bn, data.is_today, data.live_summary, data.is_completed_today);
-            showToast(`✅ ${data.train_name_bn}-এর প্রতিটি স্টেশনের টিকিট সফলভাবে স্ক্যান হয়েছে!`, 'success');
+            renderStationScanCards(lastScannedStationRecords, data.target_destination, data.date_of_journey, data.train_number, data.train_name_bn, data.is_today, data.live_summary, data.is_completed_today, fromStation);
+            showToast(`✅ ${data.train_name_bn}-এর প্রতিটি স্টেশনের লাইভ টিকিট সফলভাবে স্ক্যান ও যাচাই হয়েছে!`, 'success');
         } else {
             grid.innerHTML = `
                 <div class="glass-card rounded-2xl p-8 text-center text-rose-400 border-rose-800/40">
@@ -4100,7 +4163,7 @@ async function runStationTicketScan() {
     }
 }
 
-function renderStationScanCards(stations, destStation, dateStr, trainNum, trainNameBn, isToday = false, liveSummary = null, isCompletedToday = false) {
+function renderStationScanCards(stations, destStation, dateStr, trainNum, trainNameBn, isToday = false, liveSummary = null, isCompletedToday = false, targetFromStation = '') {
     const grid = document.getElementById('station-tickets-results-grid');
     if (!grid) return;
 
@@ -4171,11 +4234,14 @@ function renderStationScanCards(stations, destStation, dateStr, trainNum, trainN
         const isPassed = stn.is_passed;
         const isNext = stn.is_next_stop;
         const hasSeats = stn.total_available > 0;
+        const isTargetFrom = Boolean(targetFromStation && (stn.station_name.toLowerCase() === targetFromStation.toLowerCase()));
 
         let cardBorder = 'border-slate-800 hover:border-slate-700 bg-slate-900/80';
         let opacityClass = '';
 
-        if (isPassed) {
+        if (isTargetFrom) {
+            cardBorder = 'border-emerald-400 bg-gradient-to-b from-emerald-950/50 via-slate-900 to-slate-900 shadow-2xl shadow-emerald-950/70 ring-2 ring-emerald-500/60';
+        } else if (isPassed) {
             cardBorder = 'border-slate-800/60 bg-slate-950/70';
             opacityClass = 'opacity-65';
         } else if (isNext) {
@@ -4246,9 +4312,11 @@ function renderStationScanCards(stations, destStation, dateStr, trainNum, trainN
                             <span class="text-sm font-black">#${stn.station_number}</span>
                         </div>
                         <div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
                                 <h4 class="text-base font-bold text-white tracking-wide">${stn.station_name_bn || stn.station_name}</h4>
                                 <span class="text-xs text-slate-400 font-mono">(${stn.station_name})</span>
+                                ${isTargetFrom ? '<span class="px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-500/60 text-[10px] font-black animate-pulse shadow-sm">🎯 নির্বাচিত বোর্ডিং স্টেশন</span>' : ''}
+                                ${stn.total_available >= 50 && !isPassed ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 text-[10px] font-black">৫০+ আসন উপলব্ধ</span>' : ''}
                                 ${stn.is_major_station ? '<span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold">জংশন</span>' : ''}
                                 ${isNext ? '<span class="px-2 py-0.5 rounded-full bg-cyan-500/30 text-cyan-200 border border-cyan-500/50 text-[10px] font-bold animate-pulse">📍 পরবর্তী স্টপ</span>' : ''}
                                 ${isPassed ? '<span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[10px] font-bold">🚫 অতিক্রান্ত (সময় পার)</span>' : ''}

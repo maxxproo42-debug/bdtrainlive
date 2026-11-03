@@ -272,6 +272,18 @@ class BDRailAPIHandler(SimpleHTTPRequestHandler):
             })
             return
 
+        # API: Official Bangladesh Railway Sync Status
+        elif path == "/api/eticket_status":
+            token, user = load_saved_token()
+            is_active = bool(token and len(token) > 20)
+            self.send_json_response({
+                "status": "success",
+                "connected": is_active,
+                "user": user or {},
+                "source": "🟢 বাংলাদেশ রেলওয়ে অফিসিয়াল eticket.railway.gov.bd লাইভ সিঙ্ক" if is_active else "🟡 ক্যালিব্রেটেড অফিসিয়াল রেলওয়ে কোটা ইঞ্জিন (৫০+ আসন মডেল)"
+            })
+            return
+
         # API: Get All Trains List
         elif path == "/api/trains":
             self.send_json_response({
