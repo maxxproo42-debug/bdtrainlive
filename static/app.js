@@ -130,14 +130,48 @@ function initLeafletSatelliteMap() {
         layers: [baseTileLayers.satellite],
         touchZoom: true,
         dragging: true,
-        tap: true,
-        tapTolerance: 20,
+        tap: false,
         scrollWheelZoom: true,
         doubleClickZoom: true,
         bounceAtZoomLimits: false,
         inertia: true,
         inertiaDeceleration: 3000
     });
+
+    // Mobile & Touchscreen 2-Finger Rotation Gesture Handler
+    const mapDiv = document.getElementById('leaflet-map');
+    if (mapDiv) {
+        let initialAngle = null;
+        let initialBearing = 0;
+
+        mapDiv.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                const dx = e.touches[1].clientX - e.touches[0].clientX;
+                const dy = e.touches[1].clientY - e.touches[0].clientY;
+                initialAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+                initialBearing = mapBearing || 0;
+            } else {
+                initialAngle = null;
+            }
+        }, { passive: true });
+
+        mapDiv.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && initialAngle !== null) {
+                const dx = e.touches[1].clientX - e.touches[0].clientX;
+                const dy = e.touches[1].clientY - e.touches[0].clientY;
+                const currentAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+                const deltaAngle = currentAngle - initialAngle;
+                mapBearing = (initialBearing + deltaAngle + 360) % 360;
+                applyMap3DTransform();
+            }
+        }, { passive: true });
+
+        mapDiv.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                initialAngle = null;
+            }
+        }, { passive: true });
+    }
 
     setMapLayer('satellite');
     applyMap3DTransform();
@@ -240,6 +274,18 @@ async function loadAllTrainsAndStations() {
                 // Select default based on current hour
                 const currentHour = new Date().getHours();
                 scanSelect.value = (currentHour >= 17 || currentHour <= 6) ? '766' : '765';
+            }
+
+            // Populate TTMS Tracking Train Selector
+            const trackSelect = document.getElementById('tracking-train-select');
+            if (trackSelect) {
+                const trackOptions = allTrains.map(t =>
+                    `<option value="${t.number}">[${t.number}] ${t.name_bn} (${t.origin} ➔ ${t.destination})</option>`
+                ).join('');
+                trackSelect.innerHTML = trackOptions;
+                const currentHour = new Date().getHours();
+                trackSelect.value = (currentHour >= 17 || currentHour <= 6) ? '766' : '765';
+                loadTrainTimeline(trackSelect.value);
             }
 
             // Set Total Count Badges
@@ -1999,7 +2045,7 @@ function toggleWatcherEngine() {
 
         logWatcher('🟢 লাইভ সিট হান্টার ইঞ্জিন সক্রিয় করা হয়েছে...');
         if (watcherInterval) clearInterval(watcherInterval);
-        watcherInterval = setInterval(runWatcherCycle, 7000);
+        watcherInterval = setInterval(runWatcherCycle, 10000);
         runWatcherCycle();
     } else {
         if (btn) {
@@ -2099,10 +2145,9 @@ function renderWatcherAvailableCards(trains, origin, dest, date, isReSort = fals
     const logEl = document.getElementById('watcher-log');
     if (!logEl) return;
 
-    if (isReSort) {
-        const oldCards = logEl.querySelectorAll('.watcher-seat-card');
-        oldCards.forEach(c => c.remove());
-    }
+    // Remove existing train seat cards to prevent duplicate spam on every 10s auto-refresh
+    const oldCards = logEl.querySelectorAll('.watcher-seat-card');
+    oldCards.forEach(c => c.remove());
 
     trains.forEach(t => {
         const originClean = (t.journey_from || origin || 'Dhaka').toUpperCase();
@@ -2312,7 +2357,7 @@ function applyMap3DTransform() {
         mapEl.style.transformOrigin = 'center center';
     } else {
         viewport.style.perspective = 'none';
-        mapEl.style.transform = (mapBearing && !isMobile) ? `rotateZ(${mapBearing}deg)` : 'none';
+        mapEl.style.transform = mapBearing ? `rotateZ(${mapBearing}deg)` : 'none';
         mapEl.style.transformOrigin = 'center center';
     }
 }
@@ -4306,11 +4351,147 @@ function filterStationScanList(query) {
 function viewStationOnMap(stationName) {
     switchTab('map');
     if (stationsGeo && stationsGeo[stationName] && leafletMap) {
-        const [lat, lon] = stationsGeo[stationName];
-        leafletMap.setView([lat, lon], 13);
-        showToast(`📍 ম্যাপে ${stationName} স্টেশন জুম করা হয়েছে`, 'info');
+        const s = stationsGeo[stationName];
+        const lat = s.lat !== undefined ? s.lat : (Array.isArray(s) ? s[0] : null);
+        const lng = s.lng !== undefined ? s.lng : (s.lon !== undefined ? s.lon : (Array.isArray(s) ? s[1] : null));
+        if (lat && lng) {
+            leafletMap.setView([lat, lng], 13);
+            showToast(`📍 ম্যাপে ${stationName} স্টেশন জুম করা হয়েছে`, 'info');
+        } else {
+            showToast(`📍 ম্যাপ ভিউ চালু করা হয়েছে`, 'info');
+        }
     } else {
         showToast(`📍 ম্যাপ ভিউ চালু করা হয়েছে`, 'info');
+    }
+}
+
+/* ========================================================
+   TTMS 16318 & STOP-BY-STOP ROUTE TIMELINE ENGINE
+   ======================================================== */
+
+async function loadTrainTimeline(trainNum) {
+    if (!trainNum) {
+        const sel = document.getElementById('tracking-train-select');
+        trainNum = sel ? sel.value : '766';
+    }
+    const cardEl = document.getElementById('tracking-summary-card');
+    const timelineEl = document.getElementById('timeline-container');
+    if (!cardEl && !timelineEl) return;
+
+    if (cardEl) {
+        cardEl.innerHTML = `<div class="p-6 text-center text-slate-400 w-full animate-pulse">🔄 ট্রেন লাইভ ট্র্যাকিং ডাটা লোড হচ্ছে...</div>`;
+    }
+
+    try {
+        const res = await fetch(`/api/live_location?train=${encodeURIComponent(trainNum)}`);
+        const json = await res.json();
+        if (json.status !== 'success' || !json.data) {
+            if (cardEl) cardEl.innerHTML = `<div class="p-4 text-center text-rose-400 w-full">ট্রেন নম্বর ${trainNum}-এর লাইভ ট্র্যাকিং তথ্য পাওয়া যায়নি।</div>`;
+            return;
+        }
+
+        const d = json.data;
+        const isRunning = d.is_running;
+        const statusColor = isRunning ? 'emerald' : 'cyan';
+
+        // 1. Populate #tracking-summary-card
+        if (cardEl) {
+            cardEl.innerHTML = `
+                <div class="space-y-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-${statusColor}-500/20 text-${statusColor}-300 border border-${statusColor}-500/30 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-${statusColor}-400 animate-ping"></span>
+                            <span>${d.status_text_bn}</span>
+                        </span>
+                        <span class="text-xs text-slate-400">${d.data_source_badge || ''}</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                        <span>[${d.number}] ${d.name_bn}</span>
+                        <span class="text-xs font-normal text-slate-400">(${d.origin} ➔ ${d.destination})</span>
+                    </h3>
+                    <p class="text-xs text-slate-300 leading-relaxed max-w-xl">
+                        ${d.exact_location_text}
+                    </p>
+                    <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400 pt-1">
+                        <span>🕒 প্রস্থান: <strong class="text-white">${d.departure}</strong></span>
+                        <span>🏁 পৌঁছাবে: <strong class="text-white">${d.arrival}</strong></span>
+                        <span>⚡ গতি: <strong class="text-emerald-300">${d.current_speed_kmh} কিমি/ঘণ্টা</strong></span>
+                        <span>⏱️ বিলম্ব: <strong class="${d.delay_minutes > 0 ? 'text-amber-400' : 'text-emerald-400'}">${d.delay_text}</strong></span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center flex-grow sm:flex-grow-0">
+                        <div class="text-[10px] text-slate-400 uppercase font-semibold">১৬৩১৮ এসএমএস কোড</div>
+                        <div class="text-base font-mono font-black text-emerald-400">TR ${d.ttms_code || d.number}</div>
+                    </div>
+                    <a href="sms:16318?body=TR%20${d.ttms_code || d.number}" class="px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition">
+                        <i data-lucide="message-square" class="w-4 h-4"></i>
+                        <span>১৬৩১৮ তে এসএমএস পাঠান</span>
+                    </a>
+                </div>
+            `;
+        }
+
+        // 2. Populate #timeline-container
+        if (timelineEl && d.stoppages) {
+            const timings = d.station_timings || {};
+            let html = '';
+
+            d.stoppages.forEach((stn, idx) => {
+                const isOrigin = idx === 0;
+                const isDest = idx === d.stoppages.length - 1;
+                const isLastStn = d.last_station === stn;
+                const isNextStn = d.next_station === stn;
+                const tInfo = timings[stn] || {};
+                const arrTime = tInfo.arr || (isOrigin ? '-' : '--:--');
+                const depTime = tInfo.dep || (isDest ? '-' : '--:--');
+
+                let badge = '';
+                let nodeBg = 'bg-slate-800 border-slate-700 text-slate-400';
+                let cardClass = 'bg-slate-900/60 border-slate-800 text-slate-300';
+
+                if (isLastStn) {
+                    nodeBg = 'bg-emerald-500 border-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/50';
+                    cardClass = 'bg-emerald-950/60 border-emerald-500/50 text-white shadow-md';
+                    badge = d.current_speed_kmh === 0 
+                        ? `<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold animate-pulse">● বর্তমানে স্টেশনে অবস্থান করছে</span>`
+                        : `<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">● সর্বশেষ অতিক্রম করেছে</span>`;
+                } else if (isNextStn) {
+                    nodeBg = 'bg-cyan-500 border-cyan-400 text-slate-950';
+                    cardClass = 'bg-cyan-950/40 border-cyan-500/40 text-slate-200';
+                    badge = `<span class="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold">পরবর্তী স্টপ (পৌঁছাবে ${d.eta_next_station || ''})</span>`;
+                }
+
+                html += `
+                    <div class="relative group">
+                        <div class="absolute -left-[31px] top-3.5 w-4 h-4 rounded-full ${nodeBg} border-2 flex items-center justify-center font-bold text-[9px]">
+                            ${idx + 1}
+                        </div>
+                        <div class="p-3.5 rounded-xl border ${cardClass} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 transition hover:border-slate-600">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-bold text-sm text-white">${stn}</span>
+                                ${badge}
+                            </div>
+                            <div class="flex items-center gap-4 text-xs font-mono">
+                                <div class="text-slate-400">আগমণ: <strong class="text-slate-200">${arrTime}</strong></div>
+                                <div class="text-slate-400">প্রস্থান: <strong class="text-emerald-300">${depTime}</strong></div>
+                                <button type="button" onclick="viewStationOnMap('${stn}')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-sans font-medium transition flex items-center gap-1">
+                                    <span>ম্যাপে দেখুন ↗</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            timelineEl.innerHTML = html;
+        }
+
+        if (window.lucide) window.lucide.createIcons();
+    } catch (e) {
+        console.error('loadTrainTimeline error:', e);
+        if (cardEl) cardEl.innerHTML = `<div class="p-4 text-center text-rose-400 w-full">লাইভ ডাটা লোড ব্যর্থ হয়েছে: ${e.message}</div>`;
     }
 }
 

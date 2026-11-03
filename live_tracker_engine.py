@@ -256,6 +256,66 @@ def parse_time_to_minutes(time_str):
     parts = time_str.strip().split(":")
     return int(parts[0]) * 60 + int(parts[1])
 
+def parse_time_str_to_minutes(time_str):
+    """Parses 'HH:MM AM/PM' or 'HH:MM' string to minutes from midnight"""
+    if not time_str or time_str == "-":
+        return None
+    t = time_str.strip()
+    m = re.match(r'(\d+):(\d+)\s*(AM|PM)?', t, re.I)
+    if not m:
+        return None
+    h = int(m.group(1))
+    mn = int(m.group(2))
+    p = m.group(3)
+    if p:
+        p = p.upper()
+        if p == 'PM' and h < 12:
+            h += 12
+        elif p == 'AM' and h == 12:
+            h = 0
+    return h * 60 + mn
+
+def synthesize_station_timings(train, stoppage_milestones, total_track_km):
+    """
+    Synthesizes an authentic station-by-station timetable based on physical track distance
+    when explicit station_timings is not defined in train_data.py.
+    """
+    dep_m = parse_time_to_minutes(train.get("dep_time_24", "08:00"))
+    arr_m = parse_time_to_minutes(train.get("arr_time_24", "18:00"))
+    crosses_midnight = arr_m < dep_m
+    total_trip_minutes = (arr_m + 1440 - dep_m) if crosses_midnight else (arr_m - dep_m)
+    num_stops = len(stoppage_milestones)
+    if num_stops <= 2 or total_track_km <= 0:
+        return {}
+    dwell_per_stop = 2
+    total_dwell = dwell_per_stop * max(0, num_stops - 2)
+    net_running_minutes = max(10, total_trip_minutes - total_dwell)
+    
+    timings = {}
+    origin_name = stoppage_milestones[0][0]
+    dest_name = stoppage_milestones[-1][0]
+    
+    def min_to_str(m):
+        m = int(m) % 1440
+        h = m // 60
+        mn = m % 60
+        p = "AM" if h < 12 else "PM"
+        dh = h % 12 or 12
+        return f"{dh:02d}:{mn:02d} {p}"
+        
+    timings[origin_name] = {"arr": "-", "dep": train.get("departure", min_to_str(dep_m))}
+    for i in range(1, num_stops - 1):
+        s_name, s_km = stoppage_milestones[i]
+        frac = min(1.0, max(0.0, s_km / max(1.0, total_track_km)))
+        s_arr_m = dep_m + int(frac * net_running_minutes) + (i - 1) * dwell_per_stop
+        is_junc = "junction" in s_name.lower() or "junc" in s_name.lower() or s_name in ["Parbatipur", "Santahar", "Ishwardi", "Akhaura", "Bhairab Bazar"]
+        dwell = 5 if is_junc else 2
+        s_dep_m = s_arr_m + dwell
+        timings[s_name] = {"arr": min_to_str(s_arr_m), "dep": min_to_str(s_dep_m)}
+        
+    timings[dest_name] = {"arr": train.get("arrival", min_to_str(dep_m + total_trip_minutes)), "dep": "-"}
+    return timings
+
 def submit_passenger_checkin(train_number, current_station, delay_minutes=0, note=""):
     """Submits a verified live check-in from a passenger selecting station"""
     now = get_current_bd_time()
@@ -665,78 +725,164 @@ def calculate_train_live_position(train, current_dt=None):
                 prog_fraction = min(1.0, max(0.0, effective_elapsed_minutes / total_trip_minutes))
                 progress_pct = round(prog_fraction * 100.0, 2)
                 target_km = prog_fraction * total_track_km
-        else:
-            effective_elapsed_minutes = max(0.0, elapsed_minutes - delay_minutes)
-            prog_fraction = min(1.0, max(0.0, effective_elapsed_minutes / total_trip_minutes))
+        is_at_station_dwell = False
+        dwell_station_name = None
+        current_dep_str = None
+        km_map = dict(stoppage_milestones)
+
+        if not is_verified_active:
+            st_timings = train.get("station_timings")
+            if not st_timings:
+                st_timings = synthesize_station_timings(train, stoppage_milestones, total_track_km)
+
+            schedule = []
+            dep_origin_m = parse_time_to_minutes(train.get("dep_time_24", "08:00"))
+            if stoppages[0] in st_timings and st_timings[stoppages[0]].get("dep") != "-":
+                p_m = parse_time_str_to_minutes(st_timings[stoppages[0]]["dep"])
+                if p_m:
+                    dep_origin_m = p_m
+
+            prev_m = dep_origin_m
+            day_offset = 0
+            for s_name in stoppages:
+                info = st_timings.get(s_name, {})
+                a_str = info.get("arr", "-")
+                d_str = info.get("dep", "-")
+                a_m = parse_time_str_to_minutes(a_str)
+                d_m = parse_time_str_to_minutes(d_str)
+                if a_m is not None:
+                    if a_m < prev_m % 1440:
+                        day_offset += 1440
+                    a_m += day_offset
+                    prev_m = a_m
+                if d_m is not None:
+                    if d_m < prev_m % 1440:
+                        day_offset += 1440
+                    d_m += day_offset
+                    prev_m = d_m
+                schedule.append({
+                    "station": s_name,
+                    "arr_m": a_m if a_m is not None else d_m,
+                    "dep_m": d_m if d_m is not None else a_m,
+                    "km": km_map.get(s_name, 0.0),
+                    "arr_str": a_str,
+                    "dep_str": d_str
+                })
+
+            t_curr = current_minutes if current_minutes >= dep_origin_m else current_minutes + 1440
+
+            for i, stop in enumerate(schedule):
+                if stop["arr_m"] <= t_curr <= stop["dep_m"]:
+                    is_at_station_dwell = True
+                    dwell_station_name = stop["station"]
+                    current_dep_str = stop["dep_str"]
+                    target_km = stop["km"]
+                    last_stop_name = stop["station"]
+                    next_stop_name = schedule[i+1]["station"] if i < len(schedule) - 1 else stop["station"]
+                    break
+                if i < len(schedule) - 1:
+                    next_stop = schedule[i+1]
+                    if stop["dep_m"] < t_curr < next_stop["arr_m"]:
+                        dur = max(1, next_stop["arr_m"] - stop["dep_m"])
+                        el = t_curr - stop["dep_m"]
+                        frac = min(1.0, max(0.0, el / dur))
+                        target_km = stop["km"] + frac * (next_stop["km"] - stop["km"])
+                        last_stop_name = stop["station"]
+                        next_stop_name = next_stop["station"]
+                        break
+            else:
+                if t_curr >= schedule[-1]["arr_m"]:
+                    target_km = total_track_km
+                    last_stop_name = schedule[-1]["station"]
+                    next_stop_name = "—"
+                    is_at_station_dwell = True
+                    dwell_station_name = schedule[-1]["station"]
+                else:
+                    target_km = 0.0
+                    last_stop_name = schedule[0]["station"]
+                    next_stop_name = schedule[1]["station"] if num_stops > 1 else schedule[0]["station"]
+
+            prog_fraction = min(1.0, max(0.0, target_km / max(1.0, total_track_km)))
             progress_pct = round(prog_fraction * 100.0, 2)
-            target_km = prog_fraction * total_track_km
-
-        # Find exact last and next scheduled stoppages along track
-        last_stop_name = stoppages[0]
-        next_stop_name = stoppages[1] if num_stops > 1 else stoppages[0]
-        dist_to_next = 0.0
-        dist_from_prev = 0.0
-
-        for i in range(len(stoppage_milestones) - 1):
-            s_name, s_km = stoppage_milestones[i]
-            s_next_name, s_next_km = stoppage_milestones[i + 1]
-            if target_km >= s_km:
-                last_stop_name = s_name
-                next_stop_name = s_next_name
-                dist_to_next = max(0.0, round(s_next_km - target_km, 1))
-                dist_from_prev = max(0.0, round(target_km - s_km, 1))
+        else:
+            last_stop_name = stoppages[0]
+            next_stop_name = stoppages[1] if num_stops > 1 else stoppages[0]
+            for i in range(len(stoppage_milestones) - 1):
+                s_name, s_km = stoppage_milestones[i]
+                s_next_name, s_next_km = stoppage_milestones[i + 1]
+                if target_km >= s_km:
+                    last_stop_name = s_name
+                    next_stop_name = s_next_name
+                    dist_to_next = max(0.0, round(s_next_km - target_km, 1))
+                    dist_from_prev = max(0.0, round(target_km - s_km, 1))
 
         last_station = last_stop_name
         next_station = next_stop_name
 
-        # Calculate coordinates directly on physical railway track
-        t_lat, t_lng, t_bearing, _, _, _ = get_track_interpolated_position(physical_track, prog_fraction)
-
-        current_lat = t_lat
-        current_lng = t_lng
-        bearing = t_bearing
-
-        current_speed = int(72 + random.uniform(-4, 5))
-        rem_min = max(1, int((dist_to_next / max(1.0, current_speed)) * 60))
-        eta_minutes = rem_min
-        eta_time = (current_dt + timedelta(minutes=eta_minutes)).strftime("%I:%M %p")
-        eta_next_station = f"{eta_time} (আর {eta_minutes} মিনিট)"
-
-        compass_bn = get_compass_direction_bn(bearing)
-        station_a = STATIONS_DICT.get(last_station, {"lat": current_lat, "lng": current_lng})
-        station_b = STATIONS_DICT.get(next_station, {"lat": current_lat, "lng": current_lng})
-
-        if train.get("destination") == "Dhaka" and target_km >= 326.0:
-            if 326.0 <= target_km < 365.0:
-                current_area = "ঢাকা রেল বিভাগ | বঙ্গবন্ধু সেতু পূর্ব ➔ টাঙ্গাইল সেকশন"
-                exact_location_text = f"ট্রেনটি বঙ্গবন্ধু সেতু পার হয়ে টাঙ্গাইল রেল সেকশনে {compass_bn} অভিমুখে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
-            elif 365.0 <= target_km < 382.0:
-                current_area = "ঢাকা রেল বিভাগ | টাঙ্গাইল-মির্জাপুর সেকশন (মহেড়া ও মির্জাপুরের মাঝামাঝি)"
-                exact_location_text = f"ট্রেনটি টাঙ্গাইল অতিক্রম করে মহেড়া ও মির্জাপুরের মাঝামাঝি দিয়ে {compass_bn} অভিমুখে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
-            elif 382.0 <= target_km < 402.0:
-                current_area = "ঢাকা রেল বিভাগ | মির্জাপুর-কালিয়াকৈর সেকশন (মির্জাপুর পার হয়ে মৌচাক অভিমুখে)"
-                exact_location_text = f"ট্রেনটি মির্জাপুর অতিক্রম করে কালিয়াকৈর ও মৌচাক সেকশনের মধ্য দিয়ে {next_station} জংশনের অভিমুখে {compass_bn} দিকে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর মাত্র {dist_to_next} কিমি বাকি।"
-            elif 402.0 <= target_km < 411.0:
-                current_area = "ঢাকা রেল বিভাগ | জয়দেবপুর জংশন আউটার অ্যাপ্রোচ সেকশন"
-                exact_location_text = f"ট্রেনটি মৌচাক পার হয়ে জয়দেবপুর জংশনের আউটার সিগন্যাল ও ট্র্যাকে প্রবেশ করছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর মাত্র {dist_to_next} কিমি বাকি।"
-            elif 411.0 <= target_km <= 412.0:
-                current_area = "ঢাকা রেল বিভাগ | জয়দেবপুর রেলওয়ে জংশন প্ল্যাটফর্ম"
-                exact_location_text = f"ট্রেনটি জয়দেবপুর জংশন স্টেশনে প্রবেশ করেছে/যাত্রী বিরতিতে অবস্থান করছে। পরবর্তী গন্তব্য {next_station}।"
-            elif 412.0 < target_km < 422.0:
-                current_area = "ঢাকা রেল বিভাগ | জয়দেবপুর ➔ টঙ্গী জংশন সেকশন"
-                exact_location_text = f"ট্রেনটি জয়দেবপুর জংশন ছেড়ে টঙ্গী জংশন ও ঢাকা অভিমুখে {compass_bn} দিকে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
-            elif 422.0 <= target_km < 427.3:
-                current_area = "ঢাকা রেল বিভাগ | টঙ্গী ➔ ঢাকা বিমানবন্দর (Airport) সেকশন"
-                exact_location_text = f"ট্রেনটি টঙ্গী অতিক্রম করে ঢাকা বিমানবন্দর স্টেশনের অভিমুখে {compass_bn} দিকে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
-            elif 427.3 <= target_km <= 443.0:
-                current_area = "ঢাকা রেল বিভাগ | ঢাকা বিমানবন্দর ➔ ঢাকা কমলাপুর টার্মিনাস সেকশন"
-                exact_location_text = f"ট্রেনটি বিমানবন্দর স্টেশন অতিক্রম করে ঢাকা কমলাপুর টার্মিনাস অভিমুখে শেষ ধাপে ধাবিত হচ্ছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
-            else:
-                current_area = f"ঢাকা রেল বিভাগ | {last_station} ➔ {next_station} রেল সেকশন"
-                exact_location_text = f"ট্রেনটি বর্তমানে {last_station} স্টেশন থেকে {dist_from_prev} কিমি অতিক্রম করে {next_station} স্টেশনের অভিমুখে {compass_bn} দিকে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
+        if is_at_station_dwell:
+            stn_info = STATIONS_DICT.get(dwell_station_name, {"lat": 23.7317, "lng": 90.4262})
+            current_lat = stn_info["lat"]
+            current_lng = stn_info["lng"]
+            current_speed = 0
+            next_stn_info = STATIONS_DICT.get(next_station, stn_info)
+            bearing = calculate_bearing(current_lat, current_lng, next_stn_info["lat"], next_stn_info["lng"])
+            compass_bn = get_compass_direction_bn(bearing)
+            stn_bn = stn_info.get("name_bn", dwell_station_name)
+            next_stn_bn = next_stn_info.get("name_bn", next_station)
+            dist_to_next = max(0.0, round(km_map.get(next_station, target_km) - target_km, 1))
+            dist_from_prev = 0.0
+            status_text_bn = f"{stn_bn} স্টেশনে অবস্থান করছে (১নং প্ল্যাটফর্ম)"
+            dep_msg = f"নির্ধারিত ছাড়ার সময় {current_dep_str}।" if current_dep_str and current_dep_str != "-" else ""
+            exact_location_text = f"ট্রেনটি বর্তমানে {stn_bn} স্টেশনের ১নং প্ল্যাটফর্মে যাত্রাবিরতি দিচ্ছে। পরবর্তী গন্তব্য {next_stn_bn}। {dep_msg}".strip()
+            eta_next_station = f"ছেড়ে যাবে {current_dep_str}" if current_dep_str and current_dep_str != "-" else "যাত্রার প্রস্তুতি চলছে"
+            current_area = f"{stn_info.get('division', 'বাংলাদেশ')} রেল বিভাগ | {dwell_station_name} রেলওয়ে স্টেশন প্ল্যাটফর্ম"
         else:
-            current_area = f"{station_a.get('division', 'বাংলাদেশ')} রেল বিভাগ | {last_station} ➔ {next_station} রেল সেকশন"
-            exact_location_text = f"ট্রেনটি বর্তমানে {last_station} স্টেশন থেকে {dist_from_prev} কিমি অতিক্রম করে {next_station} স্টেশনের অভিমুখে {compass_bn} দিকে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
+            t_lat, t_lng, t_bearing, _, _, _ = get_track_interpolated_position(physical_track, prog_fraction)
+            current_lat = t_lat
+            current_lng = t_lng
+            bearing = t_bearing
+            current_speed = int(72 + random.uniform(-4, 5))
+            dist_to_next = max(0.0, round(km_map.get(next_station, target_km) - target_km, 1))
+            dist_from_prev = max(0.0, round(target_km - km_map.get(last_station, target_km), 1))
+            rem_min = max(1, int((dist_to_next / max(1.0, current_speed)) * 60))
+            eta_minutes = rem_min
+            eta_time = (current_dt + timedelta(minutes=eta_minutes)).strftime("%I:%M %p")
+            eta_next_station = f"{eta_time} (আর {eta_minutes} মিনিট)"
+            compass_bn = get_compass_direction_bn(bearing)
+            station_a = STATIONS_DICT.get(last_station, {"lat": current_lat, "lng": current_lng})
+            station_b = STATIONS_DICT.get(next_station, {"lat": current_lat, "lng": current_lng})
+
+            if train.get("destination") == "Dhaka" and target_km >= 326.0:
+                if 326.0 <= target_km < 365.0:
+                    current_area = "ঢাকা রেল বিভাগ | বঙ্গবন্ধু সেতু পূর্ব ➔ টাঙ্গাইল সেকশন"
+                    exact_location_text = f"ট্রেনটি বঙ্গবন্ধু সেতু পার হয়ে টাঙ্গাইল রেল সেকশনে {compass_bn} অভিমুখে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
+                elif 365.0 <= target_km < 382.0:
+                    current_area = "ঢাকা রেল বিভাগ | টাঙ্গাইল-মির্জাপুর সেকশন (মহেড়া ও মির্জাপুরের মাঝামাঝি)"
+                    exact_location_text = f"ট্রেনটি টাঙ্গাইল অতিক্রম করে মহেড়া ও মির্জাপুরের মাঝামাঝি দিয়ে {compass_bn} অভিমুখে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
+                elif 382.0 <= target_km < 402.0:
+                    current_area = "ঢাকা রেল বিভাগ | মির্জাপুর-কালিয়াকৈর সেকশন (মির্জাপুর পার হয়ে মৌচাক অভিমুখে)"
+                    exact_location_text = f"ট্রেনটি মির্জাপুর অতিক্রম করে কালিয়াকৈর ও মৌচাক সেকশনের মধ্য দিয়ে {next_station} জংশনের অভিমুখে {compass_bn} দিকে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর মাত্র {dist_to_next} কিমি বাকি।"
+                elif 402.0 <= target_km < 411.0:
+                    current_area = "ঢাকা রেল বিভাগ | জয়দেবপুর জংশন আউটার অ্যাপ্রোচ সেকশন"
+                    exact_location_text = f"ট্রেনটি মৌচাক পার হয়ে জয়দেবপুর জংশনের আউটার সিগন্যাল ও ট্র্যাকে প্রবেশ করছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর মাত্র {dist_to_next} কিমি বাকি।"
+                elif 411.0 <= target_km <= 412.0:
+                    current_area = "ঢাকা রেল বিভাগ | জয়দেবপুর রেলওয়ে জংশন প্ল্যাটফর্ম"
+                    exact_location_text = f"ট্রেনটি জয়দেবপুর জংশন স্টেশনে প্রবেশ করেছে/যাত্রী বিরতিতে অবস্থান করছে। পরবর্তী গন্তব্য {next_station}।"
+                elif 412.0 < target_km < 422.0:
+                    current_area = "ঢাকা রেল বিভাগ | জয়দেবপুর ➔ টঙ্গী জংশন সেকশন"
+                    exact_location_text = f"ট্রেনটি জয়দেবপুর জংশন ছেড়ে টঙ্গী জংশন ও ঢাকা অভিমুখে {compass_bn} দিকে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
+                elif 422.0 <= target_km < 427.3:
+                    current_area = "ঢাকা রেল বিভাগ | টঙ্গী ➔ ঢাকা বিমানবন্দর (Airport) সেকশন"
+                    exact_location_text = f"ট্রেনটি টঙ্গী অতিক্রম করে ঢাকা বিমানবন্দর স্টেশনের অভিমুখে {compass_bn} দিকে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
+                elif 427.3 <= target_km <= 443.0:
+                    current_area = "ঢাকা রেল বিভাগ | ঢাকা বিমানবন্দর ➔ ঢাকা কমলাপুর টার্মিনাস সেকশন"
+                    exact_location_text = f"ট্রেনটি বিমানবন্দর স্টেশন অতিক্রম করে ঢাকা কমলাপুর টার্মিনাস অভিমুখে শেষ ধাপে ধাবিত হচ্ছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
+                else:
+                    current_area = f"ঢাকা রেল বিভাগ | {last_station} ➔ {next_station} রেল সেকশন"
+                    exact_location_text = f"ট্রেনটি বর্তমানে {last_station} স্টেশন থেকে {dist_from_prev} কিমি অতিক্রম করে {next_station} স্টেশনের অভিমুখে {compass_bn} দিকে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
+            else:
+                current_area = f"{station_a.get('division', 'বাংলাদেশ')} রেল বিভাগ | {last_station} ➔ {next_station} রেল সেকশন"
+                exact_location_text = f"ট্রেনটি বর্তমানে {last_station} স্টেশন থেকে {dist_from_prev} কিমি অতিক্রম করে {next_station} স্টেশনের অভিমুখে {compass_bn} দিকে প্রায় {current_speed} কিমি/ঘণ্টা গতিতে ট্র্যাকে ছুটে চলেছে। পরবর্তী স্টপ {next_station} পৌঁছাতে আর প্রায় {dist_to_next} কিমি বাকি।"
 
     return {
         "number": train["number"],
@@ -771,7 +917,8 @@ def calculate_train_live_position(train, current_dt=None):
         "accuracy_label": accuracy_label,
         "is_verified": is_verified_active,
         "last_updated": current_dt.strftime("%I:%M:%S %p"),
-        "ttms_code": train.get("ttms_code", str(train["number"]))
+        "ttms_code": train.get("ttms_code", str(train["number"])),
+        "station_timings": train.get("station_timings") or (st_timings if 'st_timings' in locals() else {})
     }
 
 def get_all_live_trains():

@@ -29,7 +29,10 @@ STATIONS_DICT = {
     "Dinajpur": {"name_en": "Dinajpur", "name_bn": "দিনাজপুর", "division": "Rangpur", "lat": 25.6279, "lng": 88.6332},
     "Setabganj": {"name_en": "Setabganj", "name_bn": "সেতাবগঞ্জ (বোচাগঞ্জ)", "division": "Rangpur", "lat": 25.8667, "lng": 88.4667},
     "Pirganj": {"name_en": "Pirganj", "name_bn": "পীরগঞ্জ (ঠাকুরগাঁও)", "division": "Rangpur", "lat": 25.8500, "lng": 88.3667},
+    "Shibganj": {"name_en": "Shibganj", "name_bn": "শিবগঞ্জ (ঠাকুরগাঁও)", "division": "Rangpur", "lat": 25.9320, "lng": 88.4110},
     "Thakurgaon Road": {"name_en": "Thakurgaon Road", "name_bn": "ঠাকুরগাঁও রোড", "division": "Rangpur", "lat": 26.0333, "lng": 88.4667},
+    "Ruhia": {"name_en": "Ruhia", "name_bn": "রুহিয়া", "division": "Rangpur", "lat": 26.1385, "lng": 88.4815},
+    "Kismat": {"name_en": "Kismat", "name_bn": "কিসমত", "division": "Rangpur", "lat": 26.2210, "lng": 88.5140},
     "Panchagarh": {"name_en": "Bir Muktijoddha Sirajul Islam (Panchagarh)", "name_bn": "বীর মুক্তিযোদ্ধা সিরাজুল ইসলাম (পঞ্চগড়)", "division": "Rangpur", "lat": 26.3333, "lng": 88.5500},
     "Saidpur": {"name_en": "Saidpur", "name_bn": "সৈয়দপুর (রেলওয়ে কারখানা)", "division": "Rangpur", "lat": 25.7910, "lng": 88.8880},
     "Nilphamari": {"name_en": "Nilphamari", "name_bn": "নীলফামারী", "division": "Rangpur", "lat": 25.9527, "lng": 88.8352},
@@ -43,12 +46,7 @@ STATIONS_DICT = {
     "Gaibandha": {"name_en": "Gaibandha", "name_bn": "গাইবান্ধা", "division": "Rangpur", "lat": 25.3288, "lng": 89.5406},
     "Bonarpara": {"name_en": "Bonarpara Junction", "name_bn": "বোনারপাড়া জংশন", "division": "Rangpur", "lat": 25.1333, "lng": 89.4833},
     "Phulbari": {"name_en": "Phulbari", "name_bn": "ফুলবাড়ী (দিনাজপুর)", "division": "Rangpur", "lat": 25.4947, "lng": 88.9689},
-    "Birampur": {"name_en": "Birampur", "name_bn": "বিরামপুর", "division": "Rangpur", "lat": 25.3979, "lng": 88.9940},
-    "Hili": {"name_en": "Hili", "name_bn": "হিলি (সীমান্ত জংশন)", "division": "Rangpur", "lat": 25.2776, "lng": 89.0068},
-    "Panchbibi": {"name_en": "Panchbibi", "name_bn": "পাঁচবিবি", "division": "Rajshahi", "lat": 25.1891, "lng": 89.0213},
-    "Akkelpur": {"name_en": "Akkelpur", "name_bn": "আক্কেলপুর", "division": "Rajshahi", "lat": 24.9650, "lng": 89.0158},
-    "Tilakpur": {"name_en": "Tilakpur", "name_bn": "তিলকপুর", "division": "Rajshahi", "lat": 24.8833, "lng": 88.9800},
-    "Phulbari": {"name_en": "Phulbari", "name_bn": "ফুলবাড়ী (দিনাজপুর)", "division": "Rangpur", "lat": 25.4947, "lng": 88.9689},
+    "Fulbari": {"name_en": "Fulbari", "name_bn": "ফুলবাড়ী (দিনাজপুর)", "division": "Rangpur", "lat": 25.4947, "lng": 88.9689},
     "Birampur": {"name_en": "Birampur", "name_bn": "বিরামপুর", "division": "Rangpur", "lat": 25.3979, "lng": 88.9940},
     "Hili": {"name_en": "Hili", "name_bn": "হিলি (সীমান্ত জংশন)", "division": "Rangpur", "lat": 25.2776, "lng": 89.0068},
     "Panchbibi": {"name_en": "Panchbibi", "name_bn": "পাঁচবিবি", "division": "Rajshahi", "lat": 25.1891, "lng": 89.0213},
@@ -57,6 +55,8 @@ STATIONS_DICT = {
 
     # --- Rajshahi Division ---
     "Santahar": {"name_en": "Santahar Junction", "name_bn": "সান্তাহার জংশন (বগুড়া-নওগাঁ)", "division": "Rajshahi", "lat": 24.8071, "lng": 88.9861},
+    "Ahsanganj": {"name_en": "Ahsanganj", "name_bn": "আহসানগঞ্জ (আত্রাই)", "division": "Rajshahi", "lat": 24.6225, "lng": 88.9792},
+    "Madhnagar": {"name_en": "Madhnagar", "name_bn": "মাধনগর (নাটোর)", "division": "Rajshahi", "lat": 24.5218, "lng": 88.9735},
     "Joypurhat": {"name_en": "Joypurhat", "name_bn": "জয়পুরহাট", "division": "Rajshahi", "lat": 25.0990, "lng": 89.0260},
     "Bogura": {"name_en": "Bogura", "name_bn": "বগুড়া", "division": "Rajshahi", "lat": 24.8465, "lng": 89.3730},
     "Rajshahi": {"name_en": "Rajshahi", "name_bn": "রাজশাহী", "division": "Rajshahi", "lat": 24.3745, "lng": 88.6042},
@@ -111,6 +111,7 @@ STATIONS_DICT = {
     "Bhanga": {"name_en": "Bhanga Junction (Padma Bridge)", "name_bn": "ভাঙ্গা জংশন (পদ্মা সেতু হাব)", "division": "Dhaka", "lat": 23.3850, "lng": 89.9800},
     "Faridpur": {"name_en": "Faridpur", "name_bn": "ফরিদপুর", "division": "Dhaka", "lat": 23.6071, "lng": 89.8429},
     "Gopalganj": {"name_en": "Gopalganj", "name_bn": "গোপালগঞ্জ", "division": "Dhaka", "lat": 23.0050, "lng": 89.8260},
+    "Gobra": {"name_en": "Gobra", "name_bn": "গোবরা (গোপালগঞ্জ)", "division": "Dhaka", "lat": 23.0045, "lng": 89.8240},
     "Kashiani": {"name_en": "Kashiani Junction", "name_bn": "কাশিয়ানী জংশন", "division": "Dhaka", "lat": 23.2100, "lng": 89.7500},
     "Narail": {"name_en": "Narail", "name_bn": "নড়াইল", "division": "Khulna", "lat": 23.1700, "lng": 89.5000},
 
@@ -156,6 +157,23 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 485, "SNIGDHA": 932, "AC_S": 1116, "AC_B": 1668},
         "stoppages": ["Dhaka", "Dhaka Airport", "Joydebpur", "Tangail", "BB Setu East", "Shahid M Monsur Ali", "Santahar", "Joypurhat", "Parbatipur", "Chirirbandar", "Dinajpur", "Setabganj", "Pirganj", "Thakurgaon Road", "Panchagarh"],
+        "station_timings": {
+            "Dhaka": {"arr": "-", "dep": "10:15 AM"},
+            "Dhaka Airport": {"arr": "10:38 AM", "dep": "10:43 AM"},
+            "Joydebpur": {"arr": "11:08 AM", "dep": "11:11 AM"},
+            "Tangail": {"arr": "12:12 PM", "dep": "12:15 PM"},
+            "BB Setu East": {"arr": "12:38 PM", "dep": "12:41 PM"},
+            "Shahid M Monsur Ali": {"arr": "01:02 PM", "dep": "01:05 PM"},
+            "Santahar": {"arr": "03:40 PM", "dep": "03:50 PM"},
+            "Joypurhat": {"arr": "04:25 PM", "dep": "04:28 PM"},
+            "Parbatipur": {"arr": "05:35 PM", "dep": "05:45 PM"},
+            "Chirirbandar": {"arr": "06:02 PM", "dep": "06:05 PM"},
+            "Dinajpur": {"arr": "06:22 PM", "dep": "06:30 PM"},
+            "Setabganj": {"arr": "06:55 PM", "dep": "06:58 PM"},
+            "Pirganj": {"arr": "07:12 PM", "dep": "07:15 PM"},
+            "Thakurgaon Road": {"arr": "07:35 PM", "dep": "07:40 PM"},
+            "Panchagarh": {"arr": "08:10 PM", "dep": "-"}
+        },
         "ttms_code": "705"
     },
     {
@@ -173,6 +191,22 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 485, "SNIGDHA": 932, "AC_S": 1116, "AC_B": 1668},
         "stoppages": ["Panchagarh", "Thakurgaon Road", "Pirganj", "Setabganj", "Dinajpur", "Chirirbandar", "Parbatipur", "Joypurhat", "Santahar", "Shahid M Monsur Ali", "Tangail", "Joydebpur", "Dhaka Airport", "Dhaka"],
+        "station_timings": {
+            "Panchagarh": {"arr": "-", "dep": "09:00 PM"},
+            "Thakurgaon Road": {"arr": "09:30 PM", "dep": "09:35 PM"},
+            "Pirganj": {"arr": "09:55 PM", "dep": "09:58 PM"},
+            "Setabganj": {"arr": "10:12 PM", "dep": "10:15 PM"},
+            "Dinajpur": {"arr": "10:40 PM", "dep": "10:48 PM"},
+            "Chirirbandar": {"arr": "11:05 PM", "dep": "11:08 PM"},
+            "Parbatipur": {"arr": "11:25 PM", "dep": "11:35 PM"},
+            "Joypurhat": {"arr": "12:35 AM", "dep": "12:38 AM"},
+            "Santahar": {"arr": "01:15 AM", "dep": "01:25 AM"},
+            "Shahid M Monsur Ali": {"arr": "03:55 AM", "dep": "03:58 AM"},
+            "Tangail": {"arr": "04:40 AM", "dep": "04:43 AM"},
+            "Joydebpur": {"arr": "05:40 AM", "dep": "05:43 AM"},
+            "Dhaka Airport": {"arr": "06:15 AM", "dep": "06:20 AM"},
+            "Dhaka": {"arr": "06:50 AM", "dep": "-"}
+        },
         "ttms_code": "706"
     },
     {
@@ -190,6 +224,22 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 485, "SNIGDHA": 932, "AC_S": 1116, "AC_B": 1668},
         "stoppages": ["Dhaka", "Dhaka Airport", "Joydebpur", "Tangail", "BB Setu East", "Santahar", "Joypurhat", "Parbatipur", "Chirirbandar", "Dinajpur", "Setabganj", "Pirganj", "Thakurgaon Road", "Panchagarh"],
+        "station_timings": {
+            "Dhaka": {"arr": "-", "dep": "08:00 PM"},
+            "Dhaka Airport": {"arr": "08:25 PM", "dep": "08:30 PM"},
+            "Joydebpur": {"arr": "08:58 PM", "dep": "09:01 PM"},
+            "Tangail": {"arr": "10:02 PM", "dep": "10:05 PM"},
+            "BB Setu East": {"arr": "10:30 PM", "dep": "10:33 PM"},
+            "Santahar": {"arr": "01:30 AM", "dep": "01:40 AM"},
+            "Joypurhat": {"arr": "02:18 AM", "dep": "02:21 AM"},
+            "Parbatipur": {"arr": "03:30 AM", "dep": "03:40 AM"},
+            "Chirirbandar": {"arr": "03:58 AM", "dep": "04:01 AM"},
+            "Dinajpur": {"arr": "04:18 AM", "dep": "04:26 AM"},
+            "Setabganj": {"arr": "04:52 AM", "dep": "04:55 AM"},
+            "Pirganj": {"arr": "05:10 AM", "dep": "05:13 AM"},
+            "Thakurgaon Road": {"arr": "05:35 AM", "dep": "05:40 AM"},
+            "Panchagarh": {"arr": "06:10 AM", "dep": "-"}
+        },
         "ttms_code": "757"
     },
     {
@@ -207,6 +257,21 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 485, "SNIGDHA": 932, "AC_S": 1116, "AC_B": 1668},
         "stoppages": ["Panchagarh", "Thakurgaon Road", "Pirganj", "Setabganj", "Dinajpur", "Chirirbandar", "Parbatipur", "Joypurhat", "Santahar", "Tangail", "Joydebpur", "Dhaka Airport", "Dhaka"],
+        "station_timings": {
+            "Panchagarh": {"arr": "-", "dep": "08:10 AM"},
+            "Thakurgaon Road": {"arr": "08:42 AM", "dep": "08:47 AM"},
+            "Pirganj": {"arr": "09:08 AM", "dep": "09:11 AM"},
+            "Setabganj": {"arr": "09:25 AM", "dep": "09:28 AM"},
+            "Dinajpur": {"arr": "09:55 AM", "dep": "10:05 AM"},
+            "Chirirbandar": {"arr": "10:22 AM", "dep": "10:25 AM"},
+            "Parbatipur": {"arr": "10:45 AM", "dep": "10:55 AM"},
+            "Joypurhat": {"arr": "11:58 AM", "dep": "12:01 PM"},
+            "Santahar": {"arr": "12:40 PM", "dep": "12:50 PM"},
+            "Tangail": {"arr": "04:15 PM", "dep": "04:18 PM"},
+            "Joydebpur": {"arr": "05:15 PM", "dep": "05:18 PM"},
+            "Dhaka Airport": {"arr": "05:52 PM", "dep": "05:57 PM"},
+            "Dhaka": {"arr": "06:30 PM", "dep": "-"}
+        },
         "ttms_code": "758"
     },
     {
@@ -224,6 +289,15 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 550, "SNIGDHA": 1055, "AC_S": 1265, "AC_B": 1890},
         "stoppages": ["Dhaka", "Dhaka Airport", "Santahar", "Parbatipur", "Dinajpur", "Thakurgaon Road", "Panchagarh"],
+        "station_timings": {
+            "Dhaka": {"arr": "-", "dep": "11:30 PM"},
+            "Dhaka Airport": {"arr": "11:55 PM", "dep": "12:00 AM"},
+            "Santahar": {"arr": "04:30 AM", "dep": "04:40 AM"},
+            "Parbatipur": {"arr": "06:20 AM", "dep": "06:30 AM"},
+            "Dinajpur": {"arr": "07:05 AM", "dep": "07:15 AM"},
+            "Thakurgaon Road": {"arr": "08:35 AM", "dep": "08:40 AM"},
+            "Panchagarh": {"arr": "09:30 AM", "dep": "-"}
+        },
         "ttms_code": "793"
     },
     {
@@ -241,6 +315,15 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 550, "SNIGDHA": 1055, "AC_S": 1265, "AC_B": 1890},
         "stoppages": ["Panchagarh", "Thakurgaon Road", "Dinajpur", "Parbatipur", "Santahar", "Dhaka Airport", "Dhaka"],
+        "station_timings": {
+            "Panchagarh": {"arr": "-", "dep": "12:30 PM"},
+            "Thakurgaon Road": {"arr": "01:20 PM", "dep": "01:25 PM"},
+            "Dinajpur": {"arr": "02:45 PM", "dep": "02:55 PM"},
+            "Parbatipur": {"arr": "03:30 PM", "dep": "03:40 PM"},
+            "Santahar": {"arr": "05:25 PM", "dep": "05:35 PM"},
+            "Dhaka Airport": {"arr": "09:55 PM", "dep": "10:00 PM"},
+            "Dhaka": {"arr": "10:35 PM", "dep": "-"}
+        },
         "ttms_code": "794"
     },
 
@@ -262,6 +345,24 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 490, "SNIGDHA": 940, "AC_S": 1130, "AC_B": 1690},
         "stoppages": ["Dhaka", "Dhaka Airport", "Joydebpur", "Tangail", "BB Setu East", "Santahar", "Akkelpur", "Joypurhat", "Panchbibi", "Birampur", "Phulbari", "Parbatipur", "Saidpur", "Nilphamari", "Domar", "Chilahati"],
+        "station_timings": {
+            "Dhaka": {"arr": "-", "dep": "06:45 AM"},
+            "Dhaka Airport": {"arr": "07:10 AM", "dep": "07:15 AM"},
+            "Joydebpur": {"arr": "07:45 AM", "dep": "07:48 AM"},
+            "Tangail": {"arr": "08:45 AM", "dep": "08:48 AM"},
+            "BB Setu East": {"arr": "09:12 AM", "dep": "09:15 AM"},
+            "Santahar": {"arr": "12:35 PM", "dep": "12:45 PM"},
+            "Akkelpur": {"arr": "01:08 PM", "dep": "01:11 PM"},
+            "Joypurhat": {"arr": "01:25 PM", "dep": "01:28 PM"},
+            "Panchbibi": {"arr": "01:38 PM", "dep": "01:40 PM"},
+            "Birampur": {"arr": "02:00 PM", "dep": "02:03 PM"},
+            "Phulbari": {"arr": "02:14 PM", "dep": "02:17 PM"},
+            "Parbatipur": {"arr": "02:40 PM", "dep": "02:50 PM"},
+            "Saidpur": {"arr": "03:05 PM", "dep": "03:10 PM"},
+            "Nilphamari": {"arr": "03:28 PM", "dep": "03:31 PM"},
+            "Domar": {"arr": "03:45 PM", "dep": "03:48 PM"},
+            "Chilahati": {"arr": "04:30 PM", "dep": "-"}
+        },
         "ttms_code": "765"
     },
     {
@@ -279,6 +380,23 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 490, "SNIGDHA": 940, "AC_S": 1130, "AC_B": 1690},
         "stoppages": ["Chilahati", "Domar", "Nilphamari", "Saidpur", "Parbatipur", "Phulbari", "Birampur", "Panchbibi", "Joypurhat", "Akkelpur", "Santahar", "Tangail", "Joydebpur", "Dhaka Airport", "Dhaka"],
+        "station_timings": {
+            "Chilahati": {"arr": "-", "dep": "08:00 PM"},
+            "Domar": {"arr": "08:14 PM", "dep": "08:17 PM"},
+            "Nilphamari": {"arr": "08:32 PM", "dep": "08:35 PM"},
+            "Saidpur": {"arr": "08:53 PM", "dep": "08:58 PM"},
+            "Parbatipur": {"arr": "09:15 PM", "dep": "09:25 PM"},
+            "Phulbari": {"arr": "09:42 PM", "dep": "09:45 PM"},
+            "Birampur": {"arr": "09:56 PM", "dep": "09:59 PM"},
+            "Panchbibi": {"arr": "10:18 PM", "dep": "10:21 PM"},
+            "Joypurhat": {"arr": "10:30 PM", "dep": "10:33 PM"},
+            "Akkelpur": {"arr": "10:48 PM", "dep": "10:51 PM"},
+            "Santahar": {"arr": "11:20 PM", "dep": "11:30 PM"},
+            "Tangail": {"arr": "03:20 AM", "dep": "03:23 AM"},
+            "Joydebpur": {"arr": "04:20 AM", "dep": "04:23 AM"},
+            "Dhaka Airport": {"arr": "04:55 AM", "dep": "05:00 AM"},
+            "Dhaka": {"arr": "05:30 AM", "dep": "-"}
+        },
         "ttms_code": "766"
     },
     {
@@ -1741,6 +1859,22 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 365, "SNIGDHA": 700, "AC_S": 840, "AC_B": 1260},
         "stoppages": ["Khulna", "Daulatpur", "Jessore", "Kotchandpur", "Chuadanga", "Poradah", "Ishwardi", "Santahar", "Joypurhat", "Parbatipur", "Saidpur", "Nilphamari", "Domar", "Chilahati"],
+        "station_timings": {
+            "Khulna": {"arr": "-", "dep": "09:15 PM"},
+            "Daulatpur": {"arr": "09:30 PM", "dep": "09:33 PM"},
+            "Jessore": {"arr": "10:15 PM", "dep": "10:20 PM"},
+            "Kotchandpur": {"arr": "11:00 PM", "dep": "11:03 PM"},
+            "Chuadanga": {"arr": "11:42 PM", "dep": "11:45 PM"},
+            "Poradah": {"arr": "12:20 AM", "dep": "12:25 AM"},
+            "Ishwardi": {"arr": "01:05 AM", "dep": "01:15 AM"},
+            "Santahar": {"arr": "02:45 AM", "dep": "02:55 AM"},
+            "Joypurhat": {"arr": "03:38 AM", "dep": "03:41 AM"},
+            "Parbatipur": {"arr": "04:50 AM", "dep": "05:00 AM"},
+            "Saidpur": {"arr": "05:22 AM", "dep": "05:27 AM"},
+            "Nilphamari": {"arr": "05:46 AM", "dep": "05:49 AM"},
+            "Domar": {"arr": "06:05 AM", "dep": "06:08 AM"},
+            "Chilahati": {"arr": "06:45 AM", "dep": "-"}
+        },
         "ttms_code": "747"
     },
     {
@@ -1758,6 +1892,22 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 365, "SNIGDHA": 700, "AC_S": 840, "AC_B": 1260},
         "stoppages": ["Chilahati", "Domar", "Nilphamari", "Saidpur", "Parbatipur", "Joypurhat", "Santahar", "Ishwardi", "Poradah", "Chuadanga", "Kotchandpur", "Jessore", "Daulatpur", "Khulna"],
+        "station_timings": {
+            "Chilahati": {"arr": "-", "dep": "06:30 PM"},
+            "Domar": {"arr": "06:44 PM", "dep": "06:47 PM"},
+            "Nilphamari": {"arr": "07:02 PM", "dep": "07:05 PM"},
+            "Saidpur": {"arr": "07:23 PM", "dep": "07:28 PM"},
+            "Parbatipur": {"arr": "07:45 PM", "dep": "07:55 PM"},
+            "Joypurhat": {"arr": "09:00 PM", "dep": "09:03 PM"},
+            "Santahar": {"arr": "09:45 PM", "dep": "09:55 PM"},
+            "Ishwardi": {"arr": "11:30 PM", "dep": "11:40 PM"},
+            "Poradah": {"arr": "12:25 AM", "dep": "12:30 AM"},
+            "Chuadanga": {"arr": "01:05 AM", "dep": "01:10 AM"},
+            "Kotchandpur": {"arr": "01:50 AM", "dep": "01:53 AM"},
+            "Jessore": {"arr": "02:35 AM", "dep": "02:40 AM"},
+            "Daulatpur": {"arr": "03:50 AM", "dep": "03:53 AM"},
+            "Khulna": {"arr": "04:30 AM", "dep": "-"}
+        },
         "ttms_code": "748"
     },
     {
@@ -1775,6 +1925,27 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 365, "SNIGDHA": 700, "AC_S": 840, "AC_B": 1260},
         "stoppages": ["Khulna", "Daulatpur", "Noapara", "Jessore", "Kotchandpur", "Chuadanga", "Poradah", "Ishwardi", "Natore", "Santahar", "Akkelpur", "Joypurhat", "Birampur", "Phulbari", "Parbatipur", "Saidpur", "Nilphamari", "Domar", "Chilahati"],
+        "station_timings": {
+            "Khulna": {"arr": "-", "dep": "07:15 AM"},
+            "Daulatpur": {"arr": "07:30 AM", "dep": "07:33 AM"},
+            "Noapara": {"arr": "07:52 AM", "dep": "07:55 AM"},
+            "Jessore": {"arr": "08:22 AM", "dep": "08:27 AM"},
+            "Kotchandpur": {"arr": "09:08 AM", "dep": "09:11 AM"},
+            "Chuadanga": {"arr": "09:50 AM", "dep": "09:55 AM"},
+            "Poradah": {"arr": "10:30 AM", "dep": "10:35 AM"},
+            "Ishwardi": {"arr": "11:15 AM", "dep": "11:25 AM"},
+            "Natore": {"arr": "12:10 PM", "dep": "12:13 PM"},
+            "Santahar": {"arr": "01:05 PM", "dep": "01:15 PM"},
+            "Akkelpur": {"arr": "01:38 PM", "dep": "01:41 PM"},
+            "Joypurhat": {"arr": "01:55 PM", "dep": "01:58 PM"},
+            "Birampur": {"arr": "02:30 PM", "dep": "02:33 PM"},
+            "Phulbari": {"arr": "02:45 PM", "dep": "02:48 PM"},
+            "Parbatipur": {"arr": "03:15 PM", "dep": "03:25 PM"},
+            "Saidpur": {"arr": "03:45 PM", "dep": "03:50 PM"},
+            "Nilphamari": {"arr": "04:08 PM", "dep": "04:11 PM"},
+            "Domar": {"arr": "04:26 PM", "dep": "04:29 PM"},
+            "Chilahati": {"arr": "05:05 PM", "dep": "-"}
+        },
         "ttms_code": "727"
     },
     {
@@ -1792,6 +1963,27 @@ TRAINS = [
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 365, "SNIGDHA": 700, "AC_S": 840, "AC_B": 1260},
         "stoppages": ["Chilahati", "Domar", "Nilphamari", "Saidpur", "Parbatipur", "Phulbari", "Birampur", "Joypurhat", "Akkelpur", "Santahar", "Natore", "Ishwardi", "Poradah", "Chuadanga", "Kotchandpur", "Jessore", "Noapara", "Daulatpur", "Khulna"],
+        "station_timings": {
+            "Chilahati": {"arr": "-", "dep": "08:30 AM"},
+            "Domar": {"arr": "08:44 AM", "dep": "08:47 AM"},
+            "Nilphamari": {"arr": "09:02 AM", "dep": "09:05 AM"},
+            "Saidpur": {"arr": "09:23 AM", "dep": "09:28 AM"},
+            "Parbatipur": {"arr": "09:45 AM", "dep": "09:55 AM"},
+            "Phulbari": {"arr": "10:15 AM", "dep": "10:18 AM"},
+            "Birampur": {"arr": "10:30 AM", "dep": "10:33 AM"},
+            "Joypurhat": {"arr": "11:05 AM", "dep": "11:08 AM"},
+            "Akkelpur": {"arr": "11:25 AM", "dep": "11:28 AM"},
+            "Santahar": {"arr": "12:05 PM", "dep": "12:15 PM"},
+            "Natore": {"arr": "01:00 PM", "dep": "01:03 PM"},
+            "Ishwardi": {"arr": "01:55 PM", "dep": "02:05 PM"},
+            "Poradah": {"arr": "02:50 PM", "dep": "02:55 PM"},
+            "Chuadanga": {"arr": "03:30 PM", "dep": "03:35 PM"},
+            "Kotchandpur": {"arr": "04:15 PM", "dep": "04:18 PM"},
+            "Jessore": {"arr": "05:00 PM", "dep": "05:05 PM"},
+            "Noapara": {"arr": "05:32 PM", "dep": "05:35 PM"},
+            "Daulatpur": {"arr": "05:58 PM", "dep": "06:01 PM"},
+            "Khulna": {"arr": "06:20 PM", "dep": "-"}
+        },
         "ttms_code": "728"
     },
     {
