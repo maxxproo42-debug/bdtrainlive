@@ -270,12 +270,12 @@
       <!-- Interactive Map Frame -->
       <div id="map-main-wrapper" class="glass-card rounded-2xl overflow-hidden border-slate-800 shadow-2xl relative transition-all duration-300">
         <!-- Perspective Viewport for Smooth Google Satellite & Landscape -->
-        <div id="map-3d-viewport" class="w-full h-[740px] md:h-[800px] lg:h-[840px] overflow-hidden relative transition-all duration-300">
+        <div id="map-3d-viewport" class="w-full h-[65vh] min-h-[460px] max-h-[620px] md:h-[780px] lg:h-[840px] overflow-hidden relative transition-all duration-300">
           <div id="leaflet-map" class="w-full h-full bg-slate-950 z-10" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0;"></div>
         </div>
         
-        <!-- Floating Live Train Crossing & Signal Alert HUD -->
-        <div id="map-crossing-hud" class="absolute top-4 left-4 z-20 max-w-sm sm:max-w-md bg-slate-950/95 backdrop-blur-md p-3.5 rounded-2xl border-2 border-amber-500/60 text-xs text-white shadow-2xl space-y-2.5 transition-all">
+        <!-- Floating Live Train Crossing & Signal Alert HUD (Desktop Sidebar / Mobile Bottom Sheet) -->
+        <div id="map-crossing-hud" class="hidden md:block absolute top-4 left-4 z-30 max-w-sm sm:max-w-md bg-slate-950/95 backdrop-blur-md p-3.5 rounded-2xl border-2 border-amber-500/60 text-xs text-white shadow-2xl space-y-2.5 transition-all">
           <div class="flex items-center justify-between gap-2 border-b border-amber-500/30 pb-2">
             <div class="flex items-center gap-1.5 font-bold text-amber-300">
               <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
@@ -338,67 +338,65 @@
           </div>
         </div>
 
-        <!-- Floating Reopen Button when Crossing HUD is closed -->
-        <button id="btn-reopen-crossing-hud" onclick="openCrossingHUD()" class="hidden absolute top-4 left-4 z-20 px-3 py-1.5 rounded-xl bg-slate-950/90 border border-amber-500/60 text-amber-300 hover:text-white hover:bg-amber-600/30 text-xs font-bold shadow-xl flex items-center gap-1.5 backdrop-blur-md transition">
+        <!-- Floating Reopen Button when Crossing HUD is closed (Always sleek and compact on mobile!) -->
+        <button id="btn-reopen-crossing-hud" onclick="openCrossingHUD()" class="absolute top-2 left-2 md:top-4 md:left-4 z-20 px-2.5 py-1.5 rounded-xl bg-slate-950/90 border border-amber-500/60 text-amber-300 hover:text-white hover:bg-amber-600/30 text-[11px] md:text-xs font-bold shadow-xl flex items-center gap-1.5 backdrop-blur-md transition active:scale-95">
           <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-          <span>⚠️ ক্রসিং অ্যালার্ট দেখুন</span>
+          <span>⚠️ ক্রসিং অ্যালার্ট</span>
         </button>
 
-        <!-- Floating Live Train Tracking Area & Track Zoom HUD -->
-        <div id="map-live-area-badge" class="absolute top-4 right-4 z-20 max-w-xs sm:max-w-sm bg-slate-950/95 backdrop-blur-md p-3.5 rounded-2xl border border-emerald-500/40 text-xs text-white shadow-2xl space-y-2 transition-all">
-          <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-2">
-            <div class="flex items-center gap-1.5 font-bold text-emerald-400">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span id="map-floating-train-title">লাইভ ট্র্যাকিং সক্রিয়</span>
+        <!-- Floating Live Train Tracking Area & Track Zoom HUD (Ultra sleek on mobile!) -->
+        <div id="map-live-area-badge" class="absolute top-2 right-2 md:top-4 md:right-4 z-20 max-w-[210px] sm:max-w-xs md:max-w-sm bg-slate-950/95 backdrop-blur-md p-2 sm:p-3 md:p-3.5 rounded-xl md:rounded-2xl border border-emerald-500/40 text-[10.5px] sm:text-xs text-white shadow-2xl space-y-1.5 md:space-y-2 transition-all">
+          <div class="flex items-center justify-between gap-1.5 border-b border-slate-800 pb-1.5 md:pb-2">
+            <div class="flex items-center gap-1 font-bold text-emerald-400 truncate">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping flex-shrink-0"></span>
+              <span id="map-floating-train-title" class="truncate">লাইভ ট্র্যাকিং</span>
             </div>
-            <button onclick="zoomToLiveTrainTrack()" title="স্যাটেলাইটে ট্রেনের ট্র্যাকে ১৬x জুম করুন" class="px-2.5 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-[11px] font-bold flex items-center gap-1 transition">
-              <span>🛰️ ট্র্যাকে ১৬x জুম</span>
+            <button onclick="zoomToLiveTrainTrack()" title="স্যাটেলাইটে ট্রেনের ট্র্যাকে ১৬x জুম করুন" class="px-2 py-0.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-[10px] md:text-[11px] font-bold flex items-center gap-1 transition flex-shrink-0">
+              <span>🛰️ জুম</span>
             </button>
           </div>
-          <div class="space-y-1 text-[11px]">
-            <div class="flex items-start gap-1.5">
+          <div class="space-y-0.5 md:space-y-1 text-[10px] md:text-[11px]">
+            <div class="flex items-start gap-1">
               <span class="text-slate-400 whitespace-nowrap">📍 এলাকা:</span>
-              <span id="map-floating-area" class="font-bold text-amber-300">দিনাজপুর ➔ পার্বতীপুর রেল সেকশন</span>
+              <span id="map-floating-area" class="font-bold text-amber-300 line-clamp-2 md:line-clamp-none">দিনাজপুর ➔ পার্বতীপুর</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-slate-400">🧭 দিক ও কম্পাস:</span>
-              <span id="map-floating-compass" class="font-bold text-cyan-300">দক্ষিণ-পূর্ব (১২২°)</span>
+              <span class="text-slate-400">🧭 দিক:</span>
+              <span id="map-floating-compass" class="font-bold text-cyan-300 truncate">দক্ষিণ-পূর্ব (১২২°)</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-slate-400">⏩ পরবর্তী স্টপ:</span>
-              <span id="map-floating-next" class="font-bold text-rose-300">পার্বতীপুর জংশন</span>
+              <span class="text-slate-400">⏩ পরবর্তী:</span>
+              <span id="map-floating-next" class="font-bold text-rose-300 truncate">পার্বতীপুর</span>
             </div>
           </div>
         </div>
 
-        <!-- 360-Degree Interactive Rotation, 3D Tilt & Theater HUD -->
-        <div class="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
-          <div class="flex items-center gap-1.5 bg-slate-950/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700/80 shadow-2xl">
+        <!-- 360-Degree Interactive Rotation, 3D Tilt & Theater HUD (Touch friendly on mobile!) -->
+        <div class="absolute bottom-2 right-2 md:bottom-4 md:right-4 z-20 flex flex-col items-end gap-1.5 max-w-[calc(100vw-16px)]">
+          <div class="flex items-center gap-1 bg-slate-950/90 backdrop-blur-md p-1 md:p-1.5 rounded-xl md:rounded-2xl border border-slate-700/80 shadow-2xl overflow-x-auto max-w-full scrollbar-none">
             <!-- Gatishil Style: Follow Live Train Camera Toggle -->
-            <button onclick="toggleAutoFollowTrain()" id="btn-follow-train" title="ট্রেনের সাথে ক্যামেরা স্বয়ংক্রিয়ভাবে এগিয়ে যাবে" class="px-2.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 text-xs font-bold flex items-center gap-1 transition shadow-lg animate-pulse">
-              <span>⌖ ট্রেনের সাথে চলুন</span>
+            <button onclick="toggleAutoFollowTrain()" id="btn-follow-train" title="ট্রেনের সাথে ক্যামেরা স্বয়ংক্রিয়ভাবে এগিয়ে যাবে" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 text-[11px] md:text-xs font-bold flex items-center gap-1 transition shadow-lg flex-shrink-0">
+              <span>⌖ ফলো ট্রেন</span>
             </button>
-            <!-- Theater Mode / Big Screen Toggle -->
-            <button onclick="toggleMapTheaterMode()" id="btn-map-theater" title="বড় ম্যাপ ভিউ / ফুল স্ক্রিন টগল করুন" class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-bold flex items-center gap-1 transition">
-              <span id="theater-icon">⛶</span>
-              <span class="hidden sm:inline" id="theater-label">বড় ম্যাপ</span>
+            <!-- 3D Tilt Toggle -->
+            <button onclick="cycleMapTilt()" id="btn-map-tilt" title="৩D অবলিক টিল্ট অ্যাঙ্গেল পরিবর্তন" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 border border-slate-700 text-[11px] md:text-xs font-bold flex items-center gap-1 transition flex-shrink-0">
+              <span>📐 ৩D</span>
             </button>
-            <button onclick="toggleMapAutoOrbit()" id="btn-map-auto-orbit" title="৩৬০° স্যাটেলাইট অটো-অরবিট চালু/বন্ধ করুন" class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition">
-              <span class="text-base">🔄</span>
-              <span class="hidden sm:inline">৩৬০° অটো-অরবিট</span>
-            </button>
-            <button onclick="rotateMapStep(-45)" title="বামে ৪৫° ঘোরান" class="p-1.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition">
-              <span>↺ -৪৫°</span>
-            </button>
-            <button onclick="rotateMapStep(45)" title="ডানে ৪৫° ঘোরান" class="p-1.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition">
-              <span>↻ +৪৫°</span>
-            </button>
-            <button onclick="cycleMapTilt()" id="btn-map-tilt" title="৩D অবলিক টিল্ট অ্যাঙ্গেল পরিবর্তন" class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 border border-slate-700 text-xs font-bold flex items-center gap-1 transition">
-              <span>📐 ৩D টিল্ট</span>
-            </button>
-            <button onclick="resetMapToNorth()" title="উত্তর দিক (০°) রিসেট করুন" class="px-2.5 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 transition">
+            <!-- Reset North -->
+            <button onclick="resetMapToNorth()" title="উত্তর দিক (০°) রিসেট করুন" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-[11px] md:text-xs font-bold flex items-center gap-1 transition flex-shrink-0">
               <span id="map-compass-needle" class="inline-block transition-transform duration-300">🧭</span>
               <span id="map-compass-degree">০°</span>
+            </button>
+            <!-- Desktop extras -->
+            <button onclick="toggleMapTheaterMode()" id="btn-map-theater" title="বড় ম্যাপ ভিউ / ফুল স্ক্রিন টগল করুন" class="hidden sm:flex px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white border border-cyan-500/40 text-[11px] md:text-xs font-bold items-center gap-1 transition flex-shrink-0">
+              <span id="theater-icon">⛶</span>
+              <span id="theater-label">বড় ম্যাপ</span>
+            </button>
+            <button onclick="rotateMapStep(-45)" title="বামে ৪৫° ঘোরান" class="hidden md:flex p-1 px-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex-shrink-0">
+              <span>↺</span>
+            </button>
+            <button onclick="rotateMapStep(45)" title="ডানে ৪৫° ঘোরান" class="hidden md:flex p-1 px-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex-shrink-0">
+              <span>↻</span>
             </button>
           </div>
         </div>
@@ -1400,7 +1398,7 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 max-w-sm"></div>
 
   <!-- App Logic -->
-  <script src="/app.js?v=20261103_5"></script>
+  <script src="/app.js?v=20261103_mobile_1"></script>
 </body>
 </html>
 

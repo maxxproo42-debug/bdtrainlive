@@ -2126,8 +2126,15 @@ function closeCrossingHUD() {
     isCrossingHUDDismissedByUser = true;
     const hud = document.getElementById('map-crossing-hud');
     const reopenBtn = document.getElementById('btn-reopen-crossing-hud');
-    if (hud) hud.classList.add('hidden');
-    if (reopenBtn) reopenBtn.classList.remove('hidden');
+    if (hud) {
+        hud.classList.add('hidden');
+        hud.classList.remove('fixed', 'inset-x-3', 'bottom-4', 'z-50', 'max-h-[75vh]', 'overflow-y-auto');
+        hud.classList.add('absolute', 'top-4', 'left-4');
+    }
+    if (reopenBtn) {
+        reopenBtn.classList.remove('hidden');
+        reopenBtn.classList.add('flex');
+    }
     showToast('⚠️ ক্রসিং অ্যালার্ট বন্ধ করা হয়েছে (প্রয়োজনে পুনরায় খুলতে পারবেন)', 'info');
 }
 
@@ -2135,7 +2142,16 @@ function openCrossingHUD() {
     isCrossingHUDDismissedByUser = false;
     const hud = document.getElementById('map-crossing-hud');
     const reopenBtn = document.getElementById('btn-reopen-crossing-hud');
-    if (hud) hud.classList.remove('hidden');
+    if (hud) {
+        hud.classList.remove('hidden');
+        if (window.innerWidth < 768) {
+            hud.classList.add('fixed', 'inset-x-3', 'bottom-4', 'z-50', 'max-h-[75vh]', 'overflow-y-auto');
+            hud.classList.remove('absolute', 'top-4', 'left-4');
+        } else {
+            hud.classList.remove('fixed', 'inset-x-3', 'bottom-4', 'z-50', 'max-h-[75vh]', 'overflow-y-auto');
+            hud.classList.add('absolute', 'top-4', 'left-4');
+        }
+    }
     if (reopenBtn) reopenBtn.classList.add('hidden');
 }
 
@@ -2215,14 +2231,19 @@ function renderCrossingHUD(data) {
     const reopenBtn = document.getElementById('btn-reopen-crossing-hud');
     if (!hud) return;
 
-    if (isCrossingHUDDismissedByUser) {
-        hud.classList.add('hidden');
-        if (reopenBtn) reopenBtn.classList.remove('hidden');
-        return;
-    }
+    const isMobile = window.innerWidth < 768;
 
-    hud.classList.remove('hidden');
-    if (reopenBtn) reopenBtn.classList.add('hidden');
+    // On mobile devices, keep map 100% clean and unobstructed by default
+    if (isCrossingHUDDismissedByUser || isMobile) {
+        hud.classList.add('hidden');
+        if (reopenBtn) {
+            reopenBtn.classList.remove('hidden');
+            reopenBtn.classList.add('flex');
+        }
+    } else {
+        hud.classList.remove('hidden');
+        if (reopenBtn) reopenBtn.classList.add('hidden');
+    }
     const stnEl = document.getElementById('crossing-hud-station');
     const titleEl = document.getElementById('crossing-hud-title');
     const descEl = document.getElementById('crossing-hud-desc');
