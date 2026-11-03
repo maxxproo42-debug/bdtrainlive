@@ -182,3 +182,4 @@ def fetch_shohoz_live_trips(from_city, to_city, date_of_journey):
             "message": f"নেটওয়ার্ক সংযোগ ব্যর্থ: {e}",
             "trains": []
         }
+
