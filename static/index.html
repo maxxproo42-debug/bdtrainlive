@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="bn" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>রেল সেবা প্রো | বাংলাদেশ রেলওয়ে লাইভ ট্র্যাকার ও টিকেট অ্যালার্ট</title>
+  
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet.js Interactive Map Engine -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bdgreen: {
+              DEFAULT: '#006a4e',
+              light: '#059669',
+              dark: '#064e3b'
+            },
+            bdred: '#f42a41',
+            darkbg: '#090d16',
+            cardbg: '#111827',
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '"Hind Siliguri"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background: radial-gradient(circle at top, #062b20 0%, #080f1a 45%, #05070d 100%);
+      min-height: 100vh;
+      color: #f3f4f6;
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-nav {
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .pulse-radar {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse-ring 2s infinite;
+    }
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+      70% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+  </style>
+</head>
+<body class="font-sans antialiased pb-16">
+
+  <!-- Header / Navigation Bar -->
+  <header class="glass-nav sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-bdgreen to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-900/40">
+            <i data-lucide="train" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xl font-bold tracking-tight text-white">রেল সেবা <span class="text-emerald-400">প্রো</span></span>
+              <span class="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">লাইভ ট্র্যাকার</span>
+            </div>
+            <p class="text-xs text-slate-400 hidden sm:block">বাংলাদেশ রেলওয়ে স্মার্ট টিকেট অ্যালার্ট ও শিডিউল সিস্টেম</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center gap-1 sm:gap-2">
+          <button onclick="switchTab('map')" id="tab-btn-map" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 bg-emerald-600 text-white shadow-md">
+            <i data-lucide="map" class="w-4 h-4 text-emerald-300"></i>
+            <span class="font-bold">লাইভ ম্যাপ ট্র্যাকার</span>
+            <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+          </button>
+          <button onclick="switchTab('station_tickets')" id="tab-btn-station_tickets" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="ticket" class="w-4 h-4 text-emerald-400"></i>
+            <span class="font-bold">স্টেশন টিকিট স্ক্যানার</span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">লাইভ</span>
+          </button>
+          <button onclick="switchTab('search')" id="tab-btn-search" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="search" class="w-4 h-4"></i>
+            <span>টিকেট ও রুট</span>
+          </button>
+          <button onclick="switchTab('board')" id="tab-btn-board" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="table" class="w-4 h-4 text-cyan-400"></i>
+            <span>স্টেশন বোর্ড</span>
+          </button>
+          <button onclick="switchTab('watcher')" id="tab-btn-watcher" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="bell-ring" class="w-4 h-4 text-emerald-400"></i>
+            <span>সিট অ্যালার্ট</span>
+            <span id="badge-watching" class="hidden w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          </button>
+          <button onclick="switchTab('guide')" id="tab-btn-guide" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="book-open" class="w-4 h-4 text-amber-400"></i>
+            <span class="hidden md:inline">ভাড়া ও নিয়ম</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+
+    <!-- ========================================== -->
+    <!-- TAB 0: INTERACTIVE LIVE MAP TRACKER -->
+    <!-- ========================================== -->
+    <div id="tab-content-map" class="tab-pane space-y-5">
+      
+      <!-- Top Control Bar -->
+      <div class="glass-card rounded-2xl p-5 border-emerald-500/30">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold mb-2">
+              <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+              <span>বাংলাদেশ রেলওয়ে লাইভ GPS স্যাটেলাইট ট্র্যাকার</span>
+            </div>
+            <h1 class="text-2xl font-extrabold text-white flex items-center gap-2">
+              <span>লাইভ ট্রেন ম্যাপ ও স্টেশন নেভিগেটর</span>
+            </h1>
+            <p class="text-xs text-slate-300 mt-0.5">
+              ট্রেনটি এখন ঠিক কোথায় অবস্থান করছে এবং পরবর্তী স্টেশনে কখন পৌঁছাবে তা ম্যাপে সরাসরি দেখুন।
+            </p>
+          </div>
+
+          <!-- Train Selector & Mode Toggle -->
+          <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            <div class="relative flex-grow lg:w-72">
+              <i data-lucide="train" class="w-4 h-4 absolute left-3 top-3 text-emerald-400"></i>
+              <select id="map-train-select" onchange="onMapTrainChange()" class="w-full bg-slate-900 text-white text-xs sm:text-sm font-semibold rounded-xl pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 shadow-inner">
+                <option value="ALL">🌐 সবগুলো ট্রেন একসাথে দেখুন (All Fleet)</option>
+                <!-- Populated dynamically with all trains -->
+              </select>
+            </div>
+
+            <!-- Map View Layer Switcher (No API Keys Required - Complete Bangla Place Names) -->
+            <div class="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-700">
+              <button onclick="setMapLayer('satellite')" id="btn-layer-satellite" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-emerald-600 text-white shadow">
+                <span>🛰️ স্যাটেলাইট</span>
+              </button>
+              <button onclick="setMapLayer('railway')" id="btn-layer-railway" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition flex items-center gap-1">
+                <span>🚆 রেল ট্র্যাক</span>
+              </button>
+              <button onclick="setMapLayer('street')" id="btn-layer-street" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition flex items-center gap-1">
+                <span>🗺️ রুট</span>
+              </button>
+              <button onclick="setMapLayer('dark')" id="btn-layer-dark" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition flex items-center gap-1">
+                <span>🏙️ ডার্ক</span>
+              </button>
+            </div>
+
+            <button onclick="refreshLiveMap()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-2 transition">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>রিফ্রেশ</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Train Status Categorization Filter Pills (Gatishil / Pro Fleet Tracker) -->
+        <div class="mt-4 pt-4 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+          <span class="text-xs font-bold text-slate-400 mr-1 flex items-center gap-1">
+            <i data-lucide="filter" class="w-3.5 h-3.5 text-emerald-400"></i>
+            ফিল্টার:
+          </span>
+          <button onclick="filterFleetCategory('ALL')" id="filter-btn-ALL" class="fleet-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-emerald-600 text-white shadow-md flex items-center gap-1.5">
+            <span>🌐 সকল ট্রেন</span>
+            <span id="badge-count-all" class="px-1.5 py-0.2 rounded-full bg-slate-900/60 text-[10px] text-white">94</span>
+          </button>
+          <button onclick="filterFleetCategory('RUNNING')" id="filter-btn-RUNNING" class="fleet-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900 border border-slate-800 transition flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>🟢 লাইভ চলমান (Running Now)</span>
+            <span id="badge-count-running" class="px-1.5 py-0.2 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">0</span>
+          </button>
+          <button onclick="filterFleetCategory('ARRIVED')" id="filter-btn-ARRIVED" class="fleet-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900 border border-slate-800 transition flex items-center gap-1.5">
+            <span>🏁 গন্তব্যে অবস্থান করছে (Arrived)</span>
+            <span id="badge-count-arrived" class="px-1.5 py-0.2 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800 text-[10px]">0</span>
+          </button>
+          <button onclick="filterFleetCategory('UPCOMING')" id="filter-btn-UPCOMING" class="fleet-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900 border border-slate-800 transition flex items-center gap-1.5">
+            <span>🟡 ছাড়ার অপেক্ষায় / স্টেশনে (Waiting)</span>
+            <span id="badge-count-upcoming" class="px-1.5 py-0.2 rounded-full bg-amber-950 text-amber-300 border border-amber-800 text-[10px]">0</span>
+          </button>
+        </div>
+
+        <!-- Live Telemetry HUD Bar (Single Train Mode) -->
+        <div id="telemetry-hud" class="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 pt-4 border-t border-slate-800/80">
+          
+          <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold flex items-center gap-1">
+              <i data-lucide="activity" class="w-3 h-3 text-emerald-400"></i>
+              <span>বর্তমান স্ট্যাটাস</span>
+            </div>
+            <div id="hud-status" class="text-sm font-bold text-emerald-400 mt-1 truncate">লাইভ চলমান</div>
+          </div>
+
+          <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold flex items-center gap-1">
+              <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i>
+              <span>বিগত স্টেশন (Last Passed)</span>
+            </div>
+            <div id="hud-last-station" class="text-sm font-bold text-white mt-1 truncate">সৈয়দপুর</div>
+          </div>
+
+          <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 col-span-2 sm:col-span-1">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold flex items-center gap-1">
+              <i data-lucide="navigation" class="w-3 h-3 text-rose-400"></i>
+              <span>পরবর্তী স্টেশন (Next Stop)</span>
+            </div>
+            <div id="hud-next-station" class="text-sm font-bold text-rose-300 mt-1 truncate">পার্বতীপুর জংশন</div>
+          </div>
+
+          <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold flex items-center gap-1">
+              <i data-lucide="gauge" class="w-3 h-3 text-cyan-400"></i>
+              <span>বর্তমান গতি (Speed)</span>
+            </div>
+            <div id="hud-speed" class="text-sm font-bold text-cyan-300 mt-1">৭৪ কিমি/ঘণ্টা</div>
+          </div>
+
+          <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold flex items-center gap-1">
+              <i data-lucide="clock" class="w-3 h-3 text-amber-400"></i>
+              <span>সময়সূচি / বিলম্ব</span>
+            </div>
+            <div id="hud-delay" class="text-sm font-bold text-emerald-400 mt-1">অন-টাইম</div>
+          </div>
+
+          <div class="bg-slate-900/90 p-3 rounded-xl border border-emerald-500/40">
+            <div class="text-[10px] text-emerald-300 uppercase font-semibold flex items-center justify-between">
+              <span class="flex items-center gap-1">
+                <i data-lucide="satellite" class="w-3 h-3 text-emerald-400"></i>
+                <span>স্যাটেলাইট ট্র্যাকিং</span>
+              </span>
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            </div>
+            <div id="hud-gatishil-accuracy" class="text-sm font-bold text-emerald-300 mt-1 truncate">১০০% রিয়েল-টাইম</div>
+          </div>
+
+          <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold flex items-center gap-1">
+              <i data-lucide="armchair" class="w-3 h-3 text-emerald-400"></i>
+              <span>ফাঁকা আসন</span>
+            </div>
+            <div id="hud-seats" class="text-sm font-bold text-emerald-300 mt-1">২৪টি সিট বাকি</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Interactive Map Frame -->
+      <div id="map-main-wrapper" class="glass-card rounded-2xl overflow-hidden border-slate-800 shadow-2xl relative transition-all duration-300">
+        <!-- Perspective Viewport for Smooth Google Satellite & Landscape -->
+        <div id="map-3d-viewport" class="w-full h-[740px] md:h-[800px] lg:h-[840px] overflow-hidden relative transition-all duration-300">
+          <div id="leaflet-map" class="w-full h-full bg-slate-950 z-10" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0;"></div>
+        </div>
+        
+        <!-- Floating Live Train Crossing & Signal Alert HUD -->
+        <div id="map-crossing-hud" class="absolute top-4 left-4 z-20 max-w-sm sm:max-w-md bg-slate-950/95 backdrop-blur-md p-3.5 rounded-2xl border-2 border-amber-500/60 text-xs text-white shadow-2xl space-y-2.5 transition-all">
+          <div class="flex items-center justify-between gap-2 border-b border-amber-500/30 pb-2">
+            <div class="flex items-center gap-1.5 font-bold text-amber-300">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+              <span class="text-sm">⚠️ রেল ক্রসিং ও সিগন্যাল অ্যালার্ট</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span id="crossing-hud-station" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40 text-[10px] font-bold">সৈয়দপুর জংশন</span>
+              <button onclick="toggleCrossingHUDMinimize()" title="মিনিমাইজ / এক্সপ্যান্ড করুন" class="p-1 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition">
+                <span id="btn-crossing-min-icon" class="text-xs font-bold leading-none">➖</span>
+              </button>
+              <button onclick="closeCrossingHUD()" title="ক্রসিং অ্যালার্ট সম্পূর্ণ বন্ধ করুন" class="px-2.5 py-1 rounded-lg bg-rose-950/90 hover:bg-rose-700 text-rose-300 hover:text-white border border-rose-500/50 text-[11px] font-bold transition flex items-center gap-1 shadow active:scale-95">
+                <span>✕ বন্ধ করুন</span>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Collapsible Body Section -->
+          <div id="crossing-hud-body" class="space-y-2 text-[11px] transition-all">
+            <!-- Junction Switcher Pills -->
+            <div class="flex items-center gap-1 pt-0.5 overflow-x-auto pb-1 text-[10px]">
+              <span class="text-slate-400 font-semibold flex-shrink-0">জংশন:</span>
+              <button onclick="switchCrossingStation('Saidpur')" id="cros-pill-Saidpur" class="px-2 py-0.5 rounded-lg font-bold bg-amber-600 text-white flex-shrink-0">📍 সৈয়দপুর</button>
+              <button onclick="switchCrossingStation('Parbatipur')" id="cros-pill-Parbatipur" class="px-2 py-0.5 rounded-lg font-medium bg-slate-900 text-slate-300 hover:text-white border border-slate-700 flex-shrink-0">📍 পার্বতীপুর</button>
+              <button onclick="switchCrossingStation('Santahar')" id="cros-pill-Santahar" class="px-2 py-0.5 rounded-lg font-medium bg-slate-900 text-slate-300 hover:text-white border border-slate-700 flex-shrink-0">📍 সান্তাহার</button>
+              <button onclick="switchCrossingStation('Dhaka')" id="cros-pill-Dhaka" class="px-2 py-0.5 rounded-lg font-medium bg-slate-900 text-slate-300 hover:text-white border border-slate-700 flex-shrink-0">📍 ঢাকা</button>
+            </div>
+
+            <div id="crossing-hud-title" class="font-bold text-white text-xs leading-snug">
+              সৈয়দপুর জংশনে ক্রসিং অপেক্ষা: নীলসাগর এক্সপ্রেস ↔ রূপসা এক্সপ্রেস
+            </div>
+            <p id="crossing-hud-desc" class="text-slate-300 leading-relaxed text-[10.5px]">
+              লুপ লাইন-২ এ দাঁড়িয়ে ক্রসিং পাস দিচ্ছে রূপসা এক্সপ্রেস। নীলসাগর এক্সপ্রেস (৭৬৬) মেইন লাইন-১ দিয়ে থ্রু পাস করছে।
+            </p>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <div class="p-2 rounded-xl bg-emerald-950/70 border border-emerald-500/40">
+                <div class="text-[10px] text-emerald-300 font-bold flex items-center gap-1">
+                  <span>🟢 লাইন-১ (মেইন)</span>
+                </div>
+                <div id="crossing-train-main" class="font-black text-white text-xs mt-0.5 truncate">৭৬৬ নীলসাগর (থ্রু)</div>
+              </div>
+              <div class="p-2 rounded-xl bg-amber-950/70 border border-amber-500/40">
+                <div class="text-[10px] text-amber-300 font-bold flex items-center gap-1">
+                  <span>🟡 লাইন-২ (লুপ)</span>
+                </div>
+                <div id="crossing-train-waiting" class="font-black text-white text-xs mt-0.5 truncate">৭৮৪ রূপসা (অপেক্ষমাণ)</div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800 text-[10px]">
+              <span id="crossing-hud-countdown" class="text-slate-300 font-mono">⏱️ আনুমানিক ৮ মিনিট বাকি</span>
+              <div class="flex items-center gap-1.5">
+                <button onclick="zoomToCrossingStation()" class="px-2.5 py-1 rounded-lg bg-amber-500/30 hover:bg-amber-500 text-amber-200 hover:text-slate-950 font-bold transition flex items-center gap-1">
+                  <span>🛰️ স্পট জুম</span>
+                </button>
+                <button onclick="scrollToStationYard()" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition flex items-center gap-1 shadow">
+                  <span>🚉 ইয়ার্ড লাইন</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Reopen Button when Crossing HUD is closed -->
+        <button id="btn-reopen-crossing-hud" onclick="openCrossingHUD()" class="hidden absolute top-4 left-4 z-20 px-3 py-1.5 rounded-xl bg-slate-950/90 border border-amber-500/60 text-amber-300 hover:text-white hover:bg-amber-600/30 text-xs font-bold shadow-xl flex items-center gap-1.5 backdrop-blur-md transition">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+          <span>⚠️ ক্রসিং অ্যালার্ট দেখুন</span>
+        </button>
+
+        <!-- Floating Live Train Tracking Area & Track Zoom HUD -->
+        <div id="map-live-area-badge" class="absolute top-4 right-4 z-20 max-w-xs sm:max-w-sm bg-slate-950/95 backdrop-blur-md p-3.5 rounded-2xl border border-emerald-500/40 text-xs text-white shadow-2xl space-y-2 transition-all">
+          <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-2">
+            <div class="flex items-center gap-1.5 font-bold text-emerald-400">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span id="map-floating-train-title">লাইভ ট্র্যাকিং সক্রিয়</span>
+            </div>
+            <button onclick="zoomToLiveTrainTrack()" title="স্যাটেলাইটে ট্রেনের ট্র্যাকে ১৬x জুম করুন" class="px-2.5 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-[11px] font-bold flex items-center gap-1 transition">
+              <span>🛰️ ট্র্যাকে ১৬x জুম</span>
+            </button>
+          </div>
+          <div class="space-y-1 text-[11px]">
+            <div class="flex items-start gap-1.5">
+              <span class="text-slate-400 whitespace-nowrap">📍 এলাকা:</span>
+              <span id="map-floating-area" class="font-bold text-amber-300">দিনাজপুর ➔ পার্বতীপুর রেল সেকশন</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">🧭 দিক ও কম্পাস:</span>
+              <span id="map-floating-compass" class="font-bold text-cyan-300">দক্ষিণ-পূর্ব (১২২°)</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">⏩ পরবর্তী স্টপ:</span>
+              <span id="map-floating-next" class="font-bold text-rose-300">পার্বতীপুর জংশন</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 360-Degree Interactive Rotation, 3D Tilt & Theater HUD -->
+        <div class="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
+          <div class="flex items-center gap-1.5 bg-slate-950/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700/80 shadow-2xl">
+            <!-- Gatishil Style: Follow Live Train Camera Toggle -->
+            <button onclick="toggleAutoFollowTrain()" id="btn-follow-train" title="ট্রেনের সাথে ক্যামেরা স্বয়ংক্রিয়ভাবে এগিয়ে যাবে" class="px-2.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 text-xs font-bold flex items-center gap-1 transition shadow-lg animate-pulse">
+              <span>⌖ ট্রেনের সাথে চলুন</span>
+            </button>
+            <!-- Theater Mode / Big Screen Toggle -->
+            <button onclick="toggleMapTheaterMode()" id="btn-map-theater" title="বড় ম্যাপ ভিউ / ফুল স্ক্রিন টগল করুন" class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-bold flex items-center gap-1 transition">
+              <span id="theater-icon">⛶</span>
+              <span class="hidden sm:inline" id="theater-label">বড় ম্যাপ</span>
+            </button>
+            <button onclick="toggleMapAutoOrbit()" id="btn-map-auto-orbit" title="৩৬০° স্যাটেলাইট অটো-অরবিট চালু/বন্ধ করুন" class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition">
+              <span class="text-base">🔄</span>
+              <span class="hidden sm:inline">৩৬০° অটো-অরবিট</span>
+            </button>
+            <button onclick="rotateMapStep(-45)" title="বামে ৪৫° ঘোরান" class="p-1.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition">
+              <span>↺ -৪৫°</span>
+            </button>
+            <button onclick="rotateMapStep(45)" title="ডানে ৪৫° ঘোরান" class="p-1.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition">
+              <span>↻ +৪৫°</span>
+            </button>
+            <button onclick="cycleMapTilt()" id="btn-map-tilt" title="৩D অবলিক টিল্ট অ্যাঙ্গেল পরিবর্তন" class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 border border-slate-700 text-xs font-bold flex items-center gap-1 transition">
+              <span>📐 ৩D টিল্ট</span>
+            </button>
+            <button onclick="resetMapToNorth()" title="উত্তর দিক (০°) রিসেট করুন" class="px-2.5 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 transition">
+              <span id="map-compass-needle" class="inline-block transition-transform duration-300">🧭</span>
+              <span id="map-compass-degree">০°</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Map Floating Legend -->
+        <div class="absolute bottom-4 left-4 z-20 bg-slate-900/90 backdrop-blur-md p-3 rounded-xl border border-slate-700/70 text-xs text-slate-300 shadow-xl hidden sm:block">
+          <div class="font-bold text-white mb-1.5 flex items-center gap-1.5">
+            <i data-lucide="info" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>ম্যাপ নির্দেশিকা</span>
+          </div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow-sm shadow-emerald-500"></span>
+            <span>চলমান ট্রেনের অবস্থান (Live Train)</span>
+          </div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>
+            <span>লুপ লাইনে অপেক্ষমাণ ট্রেন (Crossing Wait)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-slate-500 inline-block"></span>
+            <span>অন্যান্য রেলওয়ে স্টেশন</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- STATION YARD & MULTI-TRACK LIVE ALLOCATION BOARD -->
+      <!-- ============================================================== -->
+      <div id="station-yard-section" class="glass-card rounded-2xl p-5 border-amber-500/30 space-y-4 shadow-2xl">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold mb-1">
+              <span>🚉 স্টেশন ইয়ার্ড ও মাল্টি-ট্র্যাক লাইভ মনিটর (Station Yard & Track Monitor)</span>
+            </div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span id="yard-station-title">সৈয়দপুর রেলওয়ে জংশন: লাইভ ট্র্যাক ও প্ল্যাটফর্ম বিন্যাস</span>
+            </h3>
+            <p class="text-xs text-slate-300">
+              কোন ট্রেন কোন লাইনে বা প্ল্যাটফর্মে প্রবেশ করছে, কোনটি লুপে ক্রসিং অপেক্ষা করছে এবং লাইভ সিগন্যাল স্থিতি।
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="zoomToCrossingStation()" class="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 transition">
+              <span>🛰️ স্যাটেলাইটে ইয়ার্ড জুম</span>
+            </button>
+            <button onclick="refreshLiveCrossings()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold flex items-center gap-1.5 transition">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>সিগন্যাল রিফ্রেশ</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dispatcher & Station Master Radio Log Banner -->
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-start gap-3 text-xs">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-base flex-shrink-0">
+            📻
+          </div>
+          <div class="space-y-0.5">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-amber-300">স্টেশন মাস্টার (ASM) কন্ট্রোল রুল ও সিগন্যাল লগ:</span>
+              <span class="px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">লক অ্যান্ড ব্লক সিস্টেম</span>
+            </div>
+            <p id="yard-dispatcher-log" class="text-slate-300 text-[11px] leading-relaxed">
+              সৈয়দপুর এএসএম: লাইন-১ দিয়ে ৭৬৬ ডাউন নীলসাগর এক্সপ্রেসের জন্য মেইন লাইন প্রস্তুত ও হোম সিগন্যাল গ্রীন। লাইন-২ লুপ ট্র্যাকে বিপরীতমুখী ট্রেনকে ক্রসিং পাস দেওয়ার জন্য দাঁড় করানো হয়েছে।
+            </p>
+          </div>
+        </div>
+
+        <!-- Visual Multi-Track Layout Lines Container -->
+        <div id="yard-tracks-container" class="space-y-2.5">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- 3D LIVE TRAIN JOURNEY SIMULATOR & SCENIC VIDEO SYSTEM -->
+      <!-- ============================================================== -->
+      <div id="train-3d-journey-section" class="glass-card rounded-2xl p-5 border-emerald-500/30 space-y-4 shadow-2xl">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold mb-1">
+              <i data-lucide="video" class="w-3.5 h-3.5"></i>
+              <span>৩D লাইভ রানিং জার্নি ও ভার্চুয়াল ককপিট ভিউ</span>
+            </div>
+            <h3 class="text-lg font-extrabold text-white flex items-center gap-2">
+              <span id="journey-cam-train-title">বাংলাবান্ধা এক্সপ্রেস (৮০৪): লাইভ চলমান ৩D ককপিট ভিউ</span>
+            </h3>
+            <p class="text-xs text-slate-300">
+              ট্রেনটি যেভাবে বাংলাদেশ রেলওয়ের ট্র্যাকে ছুটে চলেছে—তার হুবহু ৩D গতিশীল ভিজ্যুয়ালাইজেশন ও বাস্তব শব্দ।
+            </p>
+          </div>
+
+          <!-- Mode & Sound Controls -->
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-700">
+              <button onclick="setJourneyViewMode('3d')" id="btn-view-3d" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-emerald-600 text-white shadow">
+                <span>🎮 ৩D ককপিট</span>
+              </button>
+              <button onclick="setJourneyViewMode('video')" id="btn-view-video" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition flex items-center gap-1.5">
+                <span>📹 ট্র্যাক ভিডিও</span>
+              </button>
+              <button onclick="setJourneyViewMode('window')" id="btn-view-window" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition flex items-center gap-1.5">
+                <span>🪟 উইন্ডো ভিউ</span>
+              </button>
+            </div>
+
+            <!-- Audio Controls -->
+            <button onclick="toggleTrainSound()" id="btn-train-sound" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition">
+              <span id="sound-icon">🔈</span>
+              <span id="sound-label">সাউন্ড অফ</span>
+            </button>
+            <button onclick="playTrainHorn()" class="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition active:scale-95">
+              <span>📢 হুইসেল বাজান</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Simulator Screen Container -->
+        <div class="relative w-full h-[320px] sm:h-[380px] rounded-xl overflow-hidden bg-slate-950 border border-slate-800 shadow-inner flex items-center justify-center">
+          
+          <!-- View 1: 3D Canvas Perspective (Track, Scenery, Sleepers, Poles, Cockpit HUD) -->
+          <canvas id="train-3d-canvas" class="w-full h-full block"></canvas>
+
+          <!-- View 2: High-Speed Track Video Player (Real Bangladesh Railway Footage Hub) -->
+          <div id="train-video-container" class="absolute inset-0 hidden bg-black flex flex-col justify-between overflow-hidden">
+            <!-- Video Channel Controls -->
+            <div class="absolute top-2 right-2 z-30 flex items-center gap-1.5 bg-slate-950/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl">
+              <span class="text-[10px] text-slate-300 font-bold px-1">ভিডিও চ্যানেল:</span>
+              <select id="video-channel-select" onchange="changeTrackVideo(this.value)" class="bg-slate-900 text-emerald-400 text-[11px] font-bold rounded-lg px-2 py-1 border border-slate-700 focus:outline-none cursor-pointer">
+                <option value="jwPwuSYEC3o">🚄 ১. লোকোমোটিভ চালকের চোখ দিয়ে (Cab Ride 4K)</option>
+                <option value="6tN_d4m6P30">🌾 ২. ঢাকা-উত্তরবঙ্গ দ্রুতযান ও নীলসাগর এক্সপ্রেস</option>
+                <option value="zWz99V6pQ8E">🌉 ৩. যমুনা ও পদ্মা রেল সেতু পারাপার</option>
+                <option value="fV8kK4lG09Q">🌊 ৪. কক্সবাজার আইকনিক এক্সপ্রেস জার্নি</option>
+                <option value="U8c1c4x1u-I">🌳 ৫. গ্রামীণ বাংলার সবুজ রেললাইন</option>
+              </select>
+              <button onclick="openCurrentTrackVideoInNewTab()" title="ইউটিউব ফুল স্ক্রিনে সরাসরি দেখুন" class="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold flex items-center gap-1 transition shadow">
+                <span>↗️ ফুল-স্ক্রিন</span>
+              </button>
+            </div>
+
+            <!-- YouTube Video Embed -->
+            <iframe id="train-youtube-iframe" class="w-full h-full" src="https://www.youtube.com/embed/jwPwuSYEC3o?autoplay=1&mute=1&controls=1&rel=0" title="Bangladesh Railway Live Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+
+            <!-- Fallback & Guaranteed 1-Click Play Overlay (If AdBlocker/Iframe Restrictions apply) -->
+            <div id="video-hub-overlay" class="absolute bottom-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 bg-slate-950/90 backdrop-blur-md p-2.5 rounded-xl border border-slate-700 shadow-2xl">
+              <div class="flex items-center gap-2">
+                <span class="text-sm">📹</span>
+                <div>
+                  <div class="text-xs font-bold text-white">বাংলাদেশ রেলওয়ে ৪K লাইভ ট্র্যাক ভিডিও</div>
+                  <div class="text-[10px] text-slate-400">লোকোমোটিভ চালকের চোখ দিয়ে রিয়েল রেল জার্নি</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="openCurrentTrackVideoInNewTab()" class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow flex items-center gap-1.5 transition active:scale-95">
+                  <i data-lucide="play" class="w-3.5 h-3.5 fill-white"></i>
+                  <span>ইউটিউবে সরাসরি 4K চালান</span>
+                </button>
+                <button onclick="setJourneyViewMode('3d')" class="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold flex items-center gap-1 transition">
+                  <span>🎮 ৩D ককপিট</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- View 3: Passenger Scenic Window View -->
+          <div id="train-window-container" class="absolute inset-0 hidden">
+            <canvas id="train-window-canvas" class="w-full h-full block"></canvas>
+            <div class="absolute inset-0 pointer-events-none border-[16px] border-slate-900 rounded-xl shadow-2xl flex flex-col justify-between p-4">
+              <div class="text-[11px] font-bold text-amber-300/80 bg-slate-950/60 px-3 py-1 rounded-md self-start border border-amber-500/20">
+                🪟 শোভন চেয়ার বগির জানালা দিয়ে বাইরে দৃশ্য (যাত্রীর চোখ দিয়ে দেখা)
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay Cockpit HUD (Telemetry Gauges) -->
+          <div class="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-2 pointer-events-none">
+            <div class="bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs font-mono text-emerald-400 flex items-center gap-1.5 shadow">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>গতি: <strong id="hud-sim-speed" class="text-sm font-bold text-white">৭৪</strong> কিমি/ঘণ্টা</span>
+            </div>
+            <div class="bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs font-mono text-cyan-300 flex items-center gap-1.5 shadow">
+              <span>🧭 দিক: <strong id="hud-sim-heading" class="text-white">১২৮° দক্ষিণ-পূর্ব</strong></span>
+            </div>
+            <div class="bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs font-mono text-amber-300 flex items-center gap-1.5 shadow">
+              <span>🟢 সিগন্যাল: <strong class="text-emerald-400">ক্লিয়ার লাইন</strong></span>
+            </div>
+          </div>
+
+          <div class="absolute bottom-4 left-4 right-4 z-10 flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none bg-slate-950/85 backdrop-blur-md p-2.5 rounded-xl border border-slate-800 text-xs">
+            <div class="flex items-center gap-2 text-slate-200">
+              <span class="text-emerald-400 font-bold">📍 বর্তমান অবস্থান:</span>
+              <span id="hud-sim-location" class="font-semibold text-white">চিরিরবন্দর ➔ পার্বতীপুর রেলওয়ে ট্র্যাক</span>
+            </div>
+            <div class="flex items-center gap-2 text-slate-300">
+              <span>পরবর্তী স্টপেজ:</span>
+              <span id="hud-sim-next" class="font-bold text-rose-300">পার্বতীপুর জংশন (৮.৩ কিমি বাকি)</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Authentic Full Train Coach Composition (Rake Layout) -->
+      <div id="rake-composition-card" class="glass-card rounded-2xl p-5 border-emerald-500/30 space-y-3 shadow-2xl">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold mb-1">
+              <span>🚂 ট্রেনের সম্পূর্ণ বগি বিন্যাস (Coach Rake Composition)</span>
+            </div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span id="rake-train-title">ইন্টারসিটি আন্তঃনগর ট্রেন: বগি ক্রম ও আসন বিন্যাস</span>
+            </h3>
+            <p class="text-xs text-slate-300">
+              ইঞ্জিন থেকে ট্রেনের লেজ পর্যন্ত ১৪টি বগির ধারাবাহিক অবস্থান (লোকো ➔ 'ক', 'খ', 'গ'... ➔ 'ড') ও আসন সংখ্যা
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs px-2.5 py-1 rounded-lg bg-emerald-950/80 text-emerald-300 border border-emerald-600/50 font-bold flex items-center gap-1">
+              <span>➡️ সম্মুখভাগ (Engine Front)</span>
+            </span>
+            <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-900 text-slate-400 border border-slate-700 font-medium">
+              <span>🚪 পেছনের দিক (Rear)</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Rake Orientation & Bangladesh Railway Operational Rule Banner -->
+        <div id="rake-orientation-banner" class="p-3 rounded-xl bg-slate-900/90 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs">
+          <div class="flex items-start sm:items-center gap-2 text-slate-200">
+            <span class="text-base flex-shrink-0">📌</span>
+            <div>
+              <span id="rake-orientation-status" class="font-bold text-emerald-300">ঢাকা ➔ প্রান্তিকগামী: বগি 'ক' ইঞ্জিনের ঠিক পেছনে (শুরুতে), বগি 'ড' ট্রেনের লেজে!</span>
+              <p id="rake-orientation-note" class="text-[11px] text-slate-400 mt-0.5">বাংলাদেশ রেলওয়ের অফিসিয়াল নিয়ম: ঢাকা থেকে যাওয়ার সময় বগি 'ক' ইঞ্জিনের সাথে থাকে। ফিরতি যাত্রায় ইঞ্জিন অপর প্রান্তে জোড়ায় বগি 'ড' ইঞ্জিনের পাশে এবং 'ক' ট্রেনের লেজে চলে যায়।</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+            <button onclick="toggleRakeDirection()" title="ইঞ্জিনের মুখ বিপরীত প্রান্তে পরিবর্তন করুন" class="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 transition">
+              <span>🔄 দিক উল্টান ('ক' ↔ 'ড')</span>
+            </button>
+            <button onclick="openStationScannerForActiveTrain()" title="এই ট্রেনের সকল স্টেশনের টিকিট দেখুন" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition shadow">
+              <i data-lucide="ticket" class="w-3.5 h-3.5"></i>
+              <span>সকল স্টেশনের টিকিট</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 1-Click Train Direction Quick Switcher Chips -->
+        <div class="flex flex-wrap items-center gap-2 pt-1 pb-0.5 text-xs">
+          <span class="text-slate-400 font-semibold flex items-center gap-1">
+            <span>⚡ দ্রুত দিক নির্বাচন:</span>
+          </span>
+          <button onclick="switchRakeTrainNumber('766')" class="px-2.5 py-1 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/50 text-emerald-300 font-bold transition flex items-center gap-1.5 shadow">
+            <span>🚄 ৭৬৬ চিলাহাটি ➔ ঢাকা</span>
+            <span class="text-[10px] text-amber-300 bg-amber-950/80 px-1 py-0.5 rounded border border-amber-500/30 font-mono">(বগি 'ক' লেজে)</span>
+          </button>
+          <button onclick="switchRakeTrainNumber('765')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/40 text-slate-300 hover:text-white font-bold transition flex items-center gap-1.5 shadow">
+            <span>🚄 ৭৬৫ ঢাকা ➔ চিলাহাটি</span>
+            <span class="text-[10px] text-emerald-300 bg-emerald-950/80 px-1 py-0.5 rounded border border-emerald-500/30 font-mono">(বগি 'ক' শুরুতে)</span>
+          </button>
+          <button onclick="switchRakeTrainNumber('706')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/40 text-slate-300 hover:text-white font-bold transition flex items-center gap-1.5">
+            <span>🚄 ৭০৬ পঞ্চগড় ➔ ঢাকা</span>
+            <span class="text-[10px] text-amber-300 bg-amber-950/80 px-1 py-0.5 rounded border border-amber-500/30 font-mono">(বগি 'ক' লেজে)</span>
+          </button>
+          <button onclick="switchRakeTrainNumber('705')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/40 text-slate-300 hover:text-white font-bold transition flex items-center gap-1.5">
+            <span>🚄 ৭০৫ ঢাকা ➔ পঞ্চগড়</span>
+            <span class="text-[10px] text-emerald-300 bg-emerald-950/80 px-1 py-0.5 rounded border border-emerald-500/30 font-mono">(বগি 'ক' শুরুতে)</span>
+          </button>
+        </div>
+
+        <!-- Horizontal Scrollable Train Rake View -->
+        <div id="rake-coaches-container" class="flex items-center gap-2 overflow-x-auto py-3 scrollbar-thin scrollbar-thumb-emerald-600/50">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Selected Coach Detail Modal / Tooltip Area -->
+        <div id="rake-coach-detail" class="hidden p-3 rounded-xl bg-slate-900/90 border border-emerald-500/40 text-xs text-slate-200 flex items-center justify-between">
+          <div id="rake-coach-detail-text">বগিতে ক্লিক করে আসন বিস্তারিত দেখুন</div>
+          <button onclick="document.getElementById('rake-coach-detail').classList.add('hidden')" class="text-slate-400 hover:text-white text-xs px-2 py-0.5 rounded bg-slate-800">✕ বন্ধ করুন</button>
+        </div>
+      </div>
+
+      <!-- Live Station Stepper (Progress Bar) -->
+      <div id="stepper-card" class="glass-card rounded-2xl p-5 border-slate-800">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="route" class="w-4 h-4 text-emerald-400"></i>
+            <span id="stepper-train-name">যাত্রাপথের স্টেশন প্রোগ্রেস (Live Journey Timeline)</span>
+          </h3>
+          <span id="stepper-progress-text" class="text-xs font-semibold text-emerald-400 font-mono">০% সম্পন্ন</span>
+        </div>
+
+        <div id="stepper-container" class="flex items-center gap-2 overflow-x-auto py-3 scrollbar-thin scrollbar-thumb-slate-700">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Categorized Fleet Cards Section (Running / Arrived / Upcoming with HD Photos) -->
+      <div id="fleet-category-section" class="glass-card rounded-2xl p-5 border-slate-800">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 id="fleet-category-title" class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="layout-grid" class="w-4 h-4 text-emerald-400"></i>
+              <span>লাইভ চলমান ট্রেনসমূহ (Running Trains)</span>
+            </h3>
+            <p id="fleet-category-subtitle" class="text-xs text-slate-400 mt-0.5">রিয়েল-টাইমে ট্র্যাকে চলমান ট্রেনের ছবি ও লাইভ স্ট্যাটাস</p>
+          </div>
+          <span id="fleet-category-count" class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold font-mono">0 ট্রেন</span>
+        </div>
+
+        <div id="fleet-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Populated by JS with HD Train Photos, status, speed, etc. -->
+        </div>
+      </div>
+
+      <!-- Real-Time Accuracy & Ground-Truth Verification Panel -->
+      <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-5">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold mb-1">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+              <span>১০০% সত্য ও নির্ভুল ট্র্যাকিং হাব</span>
+            </div>
+            <h3 class="text-lg font-bold text-white">লাইভ লোকেশন কীভাবে কাজ করে এবং ভেরিফিকেশন সিস্টেম</h3>
+            <p class="text-xs text-slate-300 mt-0.5">
+              বাংলাদেশ রেলওয়ের কোনো পাবলিক জিপিএস নেই। আমাদের সিস্টেম ৩টি ধাপে সত্য ও নির্ভুল ট্র্যাকিং নিশ্চিত করে:
+            </p>
+          </div>
+          
+          <div id="active-accuracy-badge" class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-emerald-400 flex items-center gap-2 shadow-inner">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="accuracy-badge-text">অফিসিয়াল সময়সূচি ভিত্তিক লাইভ প্রজেকশন</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          
+          <!-- Method 1: 16318 SMS Ground-Truth Parser -->
+          <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="message-square" class="w-4 h-4 text-emerald-400"></i>
+                <span>১৬৩১৮ এসএমএস ভেরিফায়ার (১০০% আসল ডেটা)</span>
+              </h4>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">অফিসিয়াল TTMS</span>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              মোবাইলে ১৬৩১৮ থেকে পাওয়া ট্রেনের এসএমএসটি এখানে পেস্ট করুন। সিস্টেম সাথে সাথে ট্রেনের অবস্থান ও বিলম্ব ম্যাপে লক করে দিবে!
+            </p>
+            <div class="space-y-2">
+              <input type="text" id="sms-input" placeholder="উদাহরণ: TR 705 Ekota Express departed Parbatipur at 04:15 PM delay 12m" class="w-full bg-slate-950 text-white text-xs rounded-lg px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500">
+              <button onclick="submitSMSVerification()" class="w-full py-2 bg-gradient-to-r from-bdgreen to-emerald-600 hover:from-emerald-600 hover:to-emerald-500 text-white font-bold text-xs rounded-lg shadow-md transition flex items-center justify-center gap-1.5">
+                <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                <span>এসএমএস ভেরিফাই করে ম্যাপে আপডেট করুন</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Method 2: Passenger Live Check-in -->
+          <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="users" class="w-4 h-4 text-cyan-400"></i>
+                <span>আমি ট্রেনে আছি (যাত্রী লাইভ চেক-ইন)</span>
+              </h4>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">কমিউনিটি লাইভ</span>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              আপনি কি এখন এই ট্রেনের যাত্রী? আপনি কোন স্টেশন পার হচ্ছেন সিলেক্ট করে রিপোর্ট করলে সারা দেশের সবাই আসল অবস্থান দেখতে পাবে!
+            </p>
+            <div class="grid grid-cols-2 gap-2">
+              <select id="passenger-station-select" class="bg-slate-950 text-white text-xs rounded-lg px-2.5 py-2 border border-slate-700 focus:outline-none focus:border-cyan-500">
+                <option value="">বর্তমান স্টেশন নির্বাচন করুন</option>
+                <!-- Populated dynamically with current train's stops -->
+              </select>
+              <button onclick="submitPassengerCheckin()" class="py-2 bg-cyan-700 hover:bg-cyan-600 text-white font-bold text-xs rounded-lg shadow-md transition flex items-center justify-center gap-1.5">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                <span>স্টেশন রিপোর্ট</span>
+              </button>
+            </div>
+            
+            <!-- One-Tap Phone GPS Broadcast (Gatishil / Where is my train style) -->
+            <button onclick="broadcastLiveGPS()" class="w-full py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs rounded-lg shadow-md transition flex items-center justify-center gap-1.5">
+              <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+              <span>📱 আমার মোবাইলের সরাসরি GPS ব্রডকাস্ট করুন (One-Tap Live GPS)</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: SEARCH & SEAT AVAILABILITY -->
+    <!-- ========================================== -->
+    <div id="tab-content-search" class="tab-pane hidden space-y-6">
+      
+      <!-- Search Banner Card -->
+      <div class="glass-card rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-2xl border-emerald-500/20">
+        <div class="absolute -right-10 -bottom-10 opacity-5 pointer-events-none">
+          <i data-lucide="train" class="w-80 h-80 text-white"></i>
+        </div>
+
+        <div class="relative z-10 max-w-3xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold mb-3">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+            <span>অফিসিয়াল আন্তঃনগর শিডিউল ও সিট ট্র্যাকার</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-snug">
+            ট্রেনের সময়সূচি, লাইভ সিট ও রুট অনুসন্ধান
+          </h1>
+          <p class="text-slate-300 text-sm mt-1">
+            যেকোনো রুটের আন্তঃনগর ট্রেনের লাইভ সিট দেখুন এবং সিট খালি হওয়া মাত্র নোটিফিকেশন পান।
+          </p>
+        </div>
+
+        <!-- Search Form -->
+        <form id="search-form" onsubmit="handleSearch(event)" class="mt-6 grid grid-cols-1 md:grid-cols-12 gap-3 bg-slate-900/90 p-4 rounded-xl border border-slate-700/60">
+          
+          <!-- Origin Station -->
+          <div class="md:col-span-3">
+            <label class="block text-xs font-semibold text-slate-400 mb-1">প্রারম্ভিক স্টেশন (From)</label>
+            <div class="relative">
+              <i data-lucide="map-pin" class="w-4 h-4 absolute left-3 top-3 text-emerald-400"></i>
+              <select id="origin-select" class="w-full bg-slate-800 text-white text-sm rounded-lg pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500">
+                <option value="Dhaka">ঢাকা (কমলাপুর / বিমানবন্দর)</option>
+                <option value="Dinajpur">দিনাজপুর</option>
+                <option value="Panchagarh">পঞ্চগড়</option>
+                <option value="Chittagong">চট্টগ্রাম</option>
+                <option value="Cox's Bazar">কক্সবাজার</option>
+                <option value="Sylhet">সিলেট</option>
+                <option value="Rajshahi">রাজশাহী</option>
+                <option value="Khulna">খুলনা</option>
+                <option value="Rangpur">রংপুর</option>
+                <option value="Kurigram">কুড়িগ্রাম</option>
+                <option value="Mymensingh">ময়মনসিংহ</option>
+                <option value="Benapole">বেনাপোল</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Swap Button -->
+          <div class="md:col-span-1 flex items-end justify-center pb-1">
+            <button type="button" onclick="swapStations()" title="স্টেশন পরিবর্তন করুন" class="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition border border-slate-700">
+              <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Destination Station -->
+          <div class="md:col-span-3">
+            <label class="block text-xs font-semibold text-slate-400 mb-1">গন্তব্য স্টেশন (To)</label>
+            <div class="relative">
+              <i data-lucide="navigation" class="w-4 h-4 absolute left-3 top-3 text-rose-400"></i>
+              <select id="destination-select" class="w-full bg-slate-800 text-white text-sm rounded-lg pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500">
+                <option value="Dinajpur" selected>দিনাজপুর</option>
+                <option value="Dhaka">ঢাকা (কমলাপুর / বিমানবন্দর)</option>
+                <option value="Panchagarh">পঞ্চগড়</option>
+                <option value="Chittagong">চট্টগ্রাম</option>
+                <option value="Cox's Bazar">কক্সবাজার</option>
+                <option value="Sylhet">সিলেট</option>
+                <option value="Rajshahi">রাজশাহী</option>
+                <option value="Khulna">খুলনা</option>
+                <option value="Rangpur">রংপুর</option>
+                <option value="Kurigram">কুড়িগ্রাম</option>
+                <option value="Mymensingh">ময়মনসিংহ</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Journey Date -->
+          <div class="md:col-span-3">
+            <label class="block text-xs font-semibold text-slate-400 mb-1">যাত্রার তারিখ (Date)</label>
+            <div class="relative">
+              <i data-lucide="calendar" class="w-4 h-4 absolute left-3 top-3 text-amber-400"></i>
+              <input type="date" id="journey-date" class="w-full bg-slate-800 text-white text-sm rounded-lg pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500">
+            </div>
+          </div>
+
+          <!-- Search Button -->
+          <div class="md:col-span-2 flex items-end">
+            <button type="submit" class="w-full bg-gradient-to-r from-bdgreen to-emerald-600 hover:from-emerald-600 hover:to-emerald-500 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg flex items-center justify-center gap-2 transition duration-200">
+              <i data-lucide="search" class="w-4 h-4"></i>
+              <span>অনুসন্ধান</span>
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Search Results Section -->
+      <div id="results-wrapper">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="list-ordered" class="w-5 h-5 text-emerald-400"></i>
+              <span id="results-title">উপলব্ধ আন্তঃনগর ট্রেনসমূহ</span>
+            </h2>
+            <span id="results-count" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">0 ট্রেন</span>
+          </div>
+          <div class="text-xs text-slate-400">
+            লাইভ সিট ও ভাড়ার তালিকা
+          </div>
+        </div>
+
+        <!-- Train Cards Container -->
+        <div id="train-cards-container" class="grid grid-cols-1 gap-4">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB: LIVE STATION BOARD (Gatishil Style)  -->
+    <!-- ========================================== -->
+    <div id="tab-content-board" class="tab-pane hidden space-y-6">
+      <div class="glass-card rounded-2xl p-6 sm:p-8 border-cyan-500/20 shadow-2xl">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-semibold mb-2">
+              <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+              <span>লাইভ স্টেশন ডিজিটাল ডিসপ্লে বোর্ড</span>
+            </div>
+            <h2 class="text-2xl font-bold text-white">স্টেশন সময়সূচি ও আগমন-প্রস্থান বোর্ড</h2>
+            <p class="text-xs text-slate-300 mt-1">
+              যেকোনো নির্দিষ্ট রেলওয়ে স্টেশনে কোন কোন ট্রেন কখন আসবে এবং কখন ছাড়বে তা সময়ানুসারে দেখুন।
+            </p>
+          </div>
+
+          <!-- Station Selector -->
+          <div class="w-full md:w-80">
+            <label class="block text-xs font-semibold text-slate-400 mb-1">স্টেশন নির্বাচন করুন</label>
+            <div class="relative">
+              <i data-lucide="map-pin" class="w-4 h-4 absolute left-3 top-3 text-cyan-400"></i>
+              <select id="station-board-select" onchange="loadStationBoard()" class="w-full bg-slate-900 text-white text-xs sm:text-sm font-semibold rounded-xl pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-cyan-500">
+                <!-- Populated dynamically with all stations -->
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Station Board Results Table -->
+        <div class="mt-6 overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-xs font-bold text-slate-400 uppercase tracking-wider bg-slate-900/60">
+                <th class="py-3 px-4">ট্রেন নম্বর ও নাম</th>
+                <th class="py-3 px-4">মূল যাত্রাপথ</th>
+                <th class="py-3 px-4">আগমন (Arrival)</th>
+                <th class="py-3 px-4">প্রস্থান (Departure)</th>
+                <th class="py-3 px-4">ছুটির দিন</th>
+                <th class="py-3 px-4 text-right">অ্যাকশন</th>
+              </tr>
+            </thead>
+            <tbody id="station-board-tbody" class="text-xs divide-y divide-slate-800/60">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB: STATION-BY-STATION TICKET SCANNER -->
+    <!-- ========================================== -->
+    <div id="tab-content-station_tickets" class="tab-pane hidden space-y-6">
+      
+      <!-- Banner Card -->
+      <div class="glass-card rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-2xl border-emerald-500/20">
+        <div class="relative z-10 max-w-3xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold mb-3">
+            <i data-lucide="ticket" class="w-3.5 h-3.5"></i>
+            <span>অনলাইন লাইভ স্টেশন কোটা ও সিট স্ক্যানার</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-snug">
+            স্টেশনভিত্তিক লাইভ টিকিট স্ক্যানার
+          </h1>
+          <p class="text-slate-300 text-sm mt-1">
+            একটি ট্রেনের সম্পূর্ণ যাত্রাপথের প্রতিটি স্টেশনের (যেমন: চিলাহাটি, ডোমার, নীলফামারী, সৈয়দপুর, শান্তাহার ইত্যাদি) অনলাইনে উপলব্ধ টিকিট ও ভাড়ার লাইভ ডাটা একনজরে দেখুন।
+          </p>
+        </div>
+
+        <!-- Quick Select Popular Trains Bar -->
+        <div class="mt-5 space-y-2">
+          <div class="text-xs font-bold text-slate-300 flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>জনপ্রিয় ট্রেনসমূহ (১-ক্লিকে তাৎক্ষণিক স্ক্যান):</span>
+            </div>
+            <span class="text-[11px] text-slate-400">ক্লিক করে সরাসরি রুট ও টিকিট দেখুন</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="quickSelectStationScanTrain('766')" class="px-3 py-1.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold transition flex items-center gap-1.5 active:scale-95 shadow">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>৭৬৬ নীলসাগর (চিলাহাটি ➔ ঢাকা)</span>
+            </button>
+            <button onclick="quickSelectStationScanTrain('765')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
+              <span>৭৬৫ নীলসাগর (ঢাকা ➔ চিলাহাটি)</span>
+            </button>
+            <button onclick="quickSelectStationScanTrain('727')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
+              <span>৭২৭ রূপসা (খুলনা ➔ চিলাহাটি)</span>
+            </button>
+            <button onclick="quickSelectStationScanTrain('728')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
+              <span>৭২৮ রূপসা (চিলাহাটি ➔ খুলনা)</span>
+            </button>
+            <button onclick="quickSelectStationScanTrain('706')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
+              <span>৭০৬ একতা (পঞ্চগড় ➔ ঢাকা)</span>
+            </button>
+            <button onclick="quickSelectStationScanTrain('705')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
+              <span>৭০৫ একতা (ঢাকা ➔ পঞ্চগড়)</span>
+            </button>
+            <button onclick="quickSelectStationScanTrain('758')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
+              <span>৭৫৮ দ্রুতযান (পঞ্চগড় ➔ ঢাকা)</span>
+            </button>
+            <button onclick="quickSelectStationScanTrain('804')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
+              <span>৮০৪ বাংলাবান্ধা (পঞ্চগড় ➔ রাজশাহী)</span>
+            </button>
+            <button onclick="quickSelectStationScanTrain('734')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
+              <span>৭৩৪ তিতুমীর (চিলাহাটি ➔ রাজশাহী)</span>
+            </button>
+            <button onclick="quickSelectStationScanTrain('747')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
+              <span>৭৪৭ সীমান্ত (খুলনা ➔ চিলাহাটি)</span>
+            </button>
+            <button onclick="quickSelectStationScanTrain('762')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
+              <span>৭৬২ সাগরদাঁড়ি (রাজশাহী ➔ খুলনা)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scan Control Form: "সার্চ করুন এবং কই থেকে কোথায় যাবেন সিলেক্ট করুন" -->
+        <div class="mt-5 grid grid-cols-1 md:grid-cols-12 gap-3.5 bg-slate-900/95 p-4 sm:p-5 rounded-2xl border border-slate-700/80 shadow-inner">
+          
+          <!-- Search & Select Train -->
+          <div class="md:col-span-5 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>ট্রেন খুঁজুন বা ড্রপডাউন থেকে বাছুন:</span>
+              </label>
+              <span id="station-scan-total-trains-count" class="text-[10px] text-emerald-300 font-mono font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">সকল ট্রেন উপলব্ধ</span>
+            </div>
+            
+            <!-- Real-Time Train Search Box with Auto-complete Dropdown -->
+            <div class="relative">
+              <input type="text" id="station-scan-train-search" oninput="onStationScanSearchInput(this.value)" onfocus="onStationScanSearchFocus()" placeholder="🔍 ট্রেনের নাম বা নম্বর লিখুন (রূপসা, নীলসাগর, একতা, ৭২৭, ৭৬৬)..." class="w-full bg-slate-950 text-white text-xs rounded-xl pl-8 pr-8 py-2.5 border border-emerald-500/50 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 font-medium placeholder-slate-500 shadow-inner" autocomplete="off">
+              <i data-lucide="search" class="w-4 h-4 absolute left-2.5 top-2.5 text-emerald-400/70 pointer-events-none"></i>
+              <button type="button" onclick="clearStationScanSearch()" id="btn-clear-scan-search" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-white text-xs p-0.5">✕</button>
+
+              <!-- Dynamic Search Result Dropdown Menu -->
+              <div id="station-scan-search-dropdown" class="absolute left-0 right-0 top-full mt-1.5 bg-slate-950/98 backdrop-blur-md border border-emerald-500/60 rounded-xl shadow-2xl max-h-72 overflow-y-auto hidden z-50 divide-y divide-slate-800 scrollbar-thin">
+                <!-- Dynamically populated with matched trains -->
+              </div>
+            </div>
+
+            <!-- Comprehensive All-Trains Dropdown -->
+            <div class="relative">
+              <i data-lucide="train" class="w-4 h-4 absolute left-3 top-3 text-emerald-400"></i>
+              <select id="station-scan-train-select" onchange="onStationScanTrainChange()" class="w-full bg-slate-800 text-white text-xs rounded-xl pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 font-bold">
+                <option value="766">নীলসাগর এক্সপ্রেস (৭৬৬) - চিলাহাটি ➔ ঢাকা</option>
+                <option value="765">নীলসাগর এক্সপ্রেস (৭৬৫) - ঢাকা ➔ চিলাহাটি</option>
+                <option value="727">রূপসা এক্সপ্রেস (৭২৭) - খুলনা ➔ চিলাহাটি</option>
+                <option value="728">রূপসা এক্সপ্রেস (৭২৮) - চিলাহাটি ➔ খুলনা</option>
+                <option value="706">একতা এক্সপ্রেস (৭০৬) - পঞ্চগড় ➔ ঢাকা</option>
+                <option value="705">একতা এক্সপ্রেস (৭০৫) - ঢাকা ➔ পঞ্চগড়</option>
+                <option value="758">দ্রুতযান এক্সপ্রেস (৭৫৮) - পঞ্চগড় ➔ ঢাকা</option>
+                <option value="757">দ্রুতযান এক্সপ্রেস (৭৫৭) - ঢাকা ➔ পঞ্চগড়</option>
+                <option value="804">বাংলাবান্ধা এক্সপ্রেস (৮০৪) - পঞ্চগড় ➔ রাজশাহী</option>
+                <option value="803">বাংলাবান্ধা এক্সপ্রেস (৮০৩) - রাজশাহী ➔ পঞ্চগড়</option>
+                <option value="734">তিতুমীর এক্সপ্রেস (৭৩৪) - চিলাহাটি ➔ রাজশাহী</option>
+                <option value="733">তিতুমীর এক্সপ্রেস (৭৩৩) - রাজশাহী ➔ চিলাহাটি</option>
+                <option value="748">সীমান্ত এক্সপ্রেস (৭৪৮) - চিলাহাটি ➔ খুলনা</option>
+                <option value="747">সীমান্ত এক্সপ্রেস (৭৪৭) - খুলনা ➔ চিলাহাটি</option>
+                <option value="762">সাগরদাঁড়ি এক্সপ্রেস (৭৬২) - রাজশাহী ➔ খুলনা</option>
+                <option value="761">সাগরদাঁড়ি এক্সপ্রেস (৭৬১) - খুলনা ➔ রাজশাহী</option>
+                <option value="731">বরেন্দ্র এক্সপ্রেস (৭৩১) - রাজশাহী ➔ চিলাহাটি</option>
+                <option value="732">বরেন্দ্র এক্সপ্রেস (৭৩২) - চিলাহাটি ➔ রাজশাহী</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Boarding Station (From) -->
+          <div class="md:col-span-3 space-y-1.5">
+            <label class="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>কোথা থেকে উঠবেন (From):</span>
+            </label>
+            <div class="relative">
+              <select id="station-scan-from-select" onchange="onStationScanFromChange()" class="w-full bg-slate-800 text-white text-xs rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 font-semibold shadow-inner">
+                <option value="">সকল প্রারম্ভিক স্টেশন (শুরু থেকে)</option>
+              </select>
+            </div>
+            <p class="text-[10px] text-slate-400">নির্দিষ্ট স্টেশন সিলেক্ট করলে সেখান থেকে টিকিট দেখাবে</p>
+          </div>
+
+          <!-- Target Destination (To) -->
+          <div class="md:col-span-2 space-y-1.5">
+            <label class="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="navigation" class="w-3.5 h-3.5 text-rose-400"></i>
+              <span>কোথায় নামবেন (To):</span>
+            </label>
+            <div class="relative">
+              <select id="station-scan-dest-select" onchange="runStationTicketScan()" class="w-full bg-slate-800 text-white text-xs rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 font-semibold shadow-inner">
+                <option value="">শেষ গন্তব্য (Default)</option>
+              </select>
+            </div>
+            <p class="text-[10px] text-slate-400">নামার স্টেশন পরিবর্তন করতে পারেন</p>
+          </div>
+
+          <!-- Journey Date -->
+          <div class="md:col-span-2 space-y-1.5">
+            <label class="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>যাত্রার তারিখ (Date):</span>
+            </label>
+            <input type="date" id="station-scan-date" class="w-full bg-slate-800 text-white text-xs rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 font-mono shadow-inner">
+            <p class="text-[10px] text-slate-400">আজকের বা ভবিষ্যতের যেকোনো তারিখ</p>
+          </div>
+
+          <!-- Quick Date Short-cuts & Action Button -->
+          <div class="md:col-span-12 flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400">তারিখ শর্টকাট:</span>
+              <button onclick="setStationScanDateToday()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs font-semibold transition border border-slate-700 active:scale-95 shadow">📅 আজকের দিন</button>
+              <button onclick="setStationScanDateTomorrow()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold transition border border-slate-700 active:scale-95 shadow">📅 আগামীকাল</button>
+            </div>
+            <button onclick="runStationTicketScan()" id="btn-run-station-scan" class="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2.5 px-7 rounded-xl text-xs sm:text-sm transition shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2 active:scale-95">
+              <i data-lucide="scan-line" class="w-4 h-4"></i>
+              <span>লাইভ টিকিট স্ক্যান করুন</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Train Route Chain Banner (শুরু থেকে শেষ গন্তব্য) -->
+        <div id="station-route-chain-card" class="hidden mt-4 p-3 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
+            <i data-lucide="git-commit" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span id="route-chain-title">ট্রেনের সম্পূর্ণ যাত্রাপথের স্টেশন ক্রম:</span>
+          </div>
+          <div id="station-route-chain-items" class="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-thin text-xs">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Station Scanner Summary Dashboard -->
+      <div id="station-scan-summary" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="glass-card rounded-xl p-4 border-slate-800">
+          <div class="text-xs text-slate-400">আসন্ন স্টপ (টিকিট খালি)</div>
+          <div id="stat-scan-count" class="text-2xl font-black text-emerald-400 mt-1">০টি</div>
+          <div id="stat-scan-passed-note" class="text-[10px] text-slate-400">০টি স্টেশন অতিক্রান্ত</div>
+        </div>
+        <div class="glass-card rounded-xl p-4 border-slate-800">
+          <div class="text-xs text-slate-400">সর্বমোট উপলব্ধ সিট</div>
+          <div id="stat-scan-seats" class="text-2xl font-black text-emerald-300 mt-1">০টি</div>
+          <div class="text-[10px] text-emerald-500/80">অনলাইনে টিকিট বিক্রয়যোগ্য</div>
+        </div>
+        <div class="glass-card rounded-xl p-4 border-slate-800">
+          <div class="text-xs text-slate-400">শীর্ষ টিকিট স্টেশন</div>
+          <div id="stat-scan-top" class="text-base font-bold text-amber-300 mt-1 truncate">—</div>
+          <div class="text-[10px] text-slate-500">সর্বোচ্চ আসন কোটা</div>
+        </div>
+        <div class="glass-card rounded-xl p-4 border-slate-800">
+          <div class="text-xs text-slate-400">সর্বশেষ লাইভ স্ক্যান</div>
+          <div id="stat-scan-time" class="text-base font-bold text-cyan-300 mt-1">—</div>
+          <div id="stat-scan-live-badge" class="text-[10px] text-cyan-400">রিয়েল-টাইম ডাটা</div>
+        </div>
+      </div>
+
+      <!-- Station Filter Bar with Passed Station Toggle -->
+      <div id="station-filter-bar" class="hidden glass-card rounded-xl p-3 border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="relative w-full sm:w-80">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+          <input type="text" id="station-filter-input" onkeyup="filterStationScanList(this.value)" placeholder="স্টেশনের নাম দিয়ে খুঁজুন (যেমন: ডোমার, সৈয়দপুর)..." class="w-full bg-slate-900 text-white text-xs rounded-lg pl-9 pr-3 py-2 border border-slate-700 focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <!-- Filter Toggle: Upcoming only vs All -->
+        <div class="flex items-center gap-2">
+          <button id="btn-filter-upcoming" onclick="togglePassedStationsFilter(false)" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1 transition shadow">
+            <span>🟢 শুধু সামনের স্টপগুলো</span>
+          </button>
+          <button id="btn-filter-all" onclick="togglePassedStationsFilter(true)" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white text-xs font-bold flex items-center gap-1 transition">
+            <span>🌐 সব স্টপ (অতিক্রান্ত সহ)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Results Grid -->
+      <div id="station-tickets-results-grid" class="space-y-3">
+        <div class="glass-card rounded-2xl p-10 text-center text-slate-400 border-slate-800">
+          <i data-lucide="ticket" class="w-12 h-12 mx-auto text-emerald-400/50 mb-3 animate-pulse"></i>
+          <p class="font-bold text-white text-base">ট্রেন ও তারিখ সিলেক্ট করে 'স্ক্যান করুন' বাটনে ক্লিক করুন</p>
+          <p class="text-xs text-slate-400 mt-1">ট্রেনটির প্রতিটি স্টেশনের টিকিট প্রাপ্যতা সাথে সাথে প্রদর্শিত হবে</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: LIVE SEAT ALERT RADAR -->
+    <!-- ========================================== -->
+    <div id="tab-content-watcher" class="tab-pane hidden space-y-6">
+      
+      <div class="glass-card rounded-2xl p-6 sm:p-8 border-emerald-500/30">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-semibold mb-2">
+              <i data-lucide="bell" class="w-3.5 h-3.5"></i>
+              <span>অটোমেটিক সিট হান্টার ইঞ্জিন</span>
+            </div>
+            <h2 class="text-2xl font-bold text-white">লাইভ সিট মনিটরিং ও ইনস্ট্যান্ট অ্যালার্ট</h2>
+            <p class="text-slate-300 text-sm mt-1">
+              যেসব ট্রেনের টিকিট শেষ হয়ে গেছে, সেগুলোর জন্য ওয়াচার চালু রাখুন। কেউ টিকিট বাতিল করলে সাথে সাথে সাউন্ড অ্যালার্ম বেজে উঠবে!
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button id="toggle-watcher-btn" onclick="toggleWatcherEngine()" class="px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white">
+              <i data-lucide="play" class="w-4 h-4"></i>
+              <span>মনিটরিং চালু করুন</span>
+            </button>
+            <button onclick="testChime()" title="সাউন্ড অ্যালার্ম টেস্ট করুন" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-sm flex items-center gap-1.5 transition">
+              <i data-lucide="volume-2" class="w-4 h-4 text-amber-400"></i>
+              <span>টেস্ট বেল</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Radar Status Display -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex items-center gap-4">
+            <div id="radar-indicator" class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400">
+              <i data-lucide="radar" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400">ইঞ্জিন স্ট্যাটাস</div>
+              <div id="radar-status-text" class="text-base font-bold text-slate-300">অফলাইন</div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <i data-lucide="refresh-cw" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400">মোট স্ক্যান সম্পন্ন</div>
+              <div id="radar-scans-count" class="text-base font-bold text-white">0 বার</div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <i data-lucide="sparkles" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400">সিট শনাক্তকরণ অ্যালার্ট</div>
+              <div id="radar-alerts-count" class="text-base font-bold text-white">0 টি সিট পাওয়া গেছে</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Watcher Console Logs -->
+        <div class="mt-6 bg-slate-950 p-4 rounded-xl border border-slate-800">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="terminal" class="w-3.5 h-3.5 text-emerald-400"></i>
+              রিয়েল-টাইম স্ক্যান লগ
+            </span>
+            <span class="text-[11px] text-slate-500">Auto-refreshing every 10s</span>
+          </div>
+          <div id="watcher-log" class="font-mono text-xs text-slate-300 space-y-1 h-44 overflow-y-auto pr-2">
+            <div class="text-slate-500">সিট ওয়াচার স্ট্যান্ডবাই মোডে আছে। 'মনিটরিং চালু করুন' বাটনে ক্লিক করে লাইভ চেকার সক্রিয় করুন।</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: LIVE TRACKING & TTMS 16318 -->
+    <!-- ========================================== -->
+    <div id="tab-content-tracking" class="tab-pane hidden space-y-6">
+      
+      <div class="glass-card rounded-2xl p-6 sm:p-8">
+        <div class="max-w-2xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-semibold mb-2">
+            <i data-lucide="satellite" class="w-3.5 h-3.5"></i>
+            <span>অফিসিয়াল TTMS ও এসএমএস ট্র্যাকিং</span>
+          </div>
+          <h2 class="text-2xl font-bold text-white">ট্রেন ট্র্যাকিং ও স্টপ-বাই-স্টপ সময়সূচি</h2>
+          <p class="text-slate-300 text-sm mt-1">
+            যেকোনো আন্তঃনগর ট্রেনের সম্পূর্ণ যাত্রা পথ, বিরতির সময় এবং ১৬৩১৮ এসএমএস ট্র্যাকিং কোড দেখুন।
+          </p>
+        </div>
+
+        <!-- Select Train to Track -->
+        <div class="mt-6 max-w-xl">
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5">ট্রেন নির্বাচন করুন (Select Train)</label>
+          <div class="relative">
+            <i data-lucide="train" class="w-4 h-4 absolute left-3 top-3.5 text-emerald-400"></i>
+            <select id="tracking-train-select" onchange="loadTrainTimeline()" class="w-full bg-slate-900 text-white text-sm rounded-xl pl-10 pr-4 py-3 border border-slate-700 focus:outline-none focus:border-emerald-500">
+              <!-- Populated by JS -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Train Quick Status & SMS Action Card -->
+        <div id="tracking-summary-card" class="mt-6 bg-slate-900/90 rounded-xl p-5 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Timeline Container -->
+        <div class="mt-8">
+          <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <i data-lucide="git-commit" class="w-4 h-4 text-emerald-400"></i>
+            <span>স্টপ-বাই-স্টপ যাত্রা রুট (Route Stops)</span>
+          </h3>
+          <div id="timeline-container" class="space-y-3 relative pl-6 border-l-2 border-slate-800 ml-4">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: FARE & RAILWAY GUIDE -->
+    <!-- ========================================== -->
+    <div id="tab-content-guide" class="tab-pane hidden space-y-6">
+      
+      <div class="glass-card rounded-2xl p-6 sm:p-8">
+        <h2 class="text-2xl font-bold text-white mb-4">বাংলাদেশ রেলওয়ে যাত্রী নির্দেশিকা ও ভাড়ার নীতিমালা</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Card 1: Refund Policy -->
+          <div class="bg-slate-900/80 p-5 rounded-xl border border-slate-800">
+            <div class="flex items-center gap-2 text-rose-400 font-bold text-base mb-2">
+              <i data-lucide="clock" class="w-5 h-5"></i>
+              <span>টিকেট ফেরত ও রিফান্ড নীতি (Refund Rules)</span>
+            </div>
+            <ul class="text-xs text-slate-300 space-y-2 leading-relaxed">
+              <li>• <strong>৪৮ ঘণ্টার বেশি আগে:</strong> ভাড়ার ১০% সার্ভিস চার্জ কর্তন করে বাকি টাকা ফেরত।</li>
+              <li>• <strong>৪৮ ঘণ্টার কম থেকে ২৪ ঘণ্টার বেশি:</strong> ভাড়ার ২৫% কর্তন।</li>
+              <li>• <strong>২৪ ঘণ্টার কম থেকে ১২ ঘণ্টার বেশি:</strong> ভাড়ার ৫০% কর্তন।</li>
+              <li>• <strong>১২ ঘণ্টার কম থেকে ৬ ঘণ্টার বেশি:</strong> ভাড়ার ৭৫% কর্তন।</li>
+              <li>• <strong>৬ ঘণ্টার কম সময় থাকলে:</strong> কোনো রিফান্ড পাওয়া যায় না।</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Emergency Helpline -->
+          <div class="bg-slate-900/80 p-5 rounded-xl border border-slate-800">
+            <div class="flex items-center gap-2 text-emerald-400 font-bold text-base mb-2">
+              <i data-lucide="phone-call" class="w-5 h-5"></i>
+              <span>জরুরি যোগাযোগ ও হেল্পলাইন</span>
+            </div>
+            <div class="space-y-2 text-xs text-slate-300">
+              <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950">
+                <span>ট্রেন ট্র্যাকিং এসএমএস (TTMS):</span>
+                <span class="font-bold text-emerald-400">16318</span>
+              </div>
+              <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950">
+                <span>রেলওয়ে পুলিশ কন্ট্রোল রুম (GRP):</span>
+                <span class="font-bold text-emerald-400">01711-692999</span>
+              </div>
+              <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950">
+                <span>জাতীয় জরুরি সেবা:</span>
+                <span class="font-bold text-rose-400">999</span>
+              </div>
+              <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950">
+                <span>Shohoz e-Ticket হেল্পডেস্ক:</span>
+                <span class="font-bold text-amber-400">16374 / support@shohoz.com</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Luggage Rule -->
+        <div class="mt-6 bg-slate-900/80 p-5 rounded-xl border border-slate-800">
+          <h4 class="font-bold text-sm text-white mb-2 flex items-center gap-2">
+            <i data-lucide="luggage" class="w-4 h-4 text-amber-400"></i>
+            <span>লাগেজ বহন সুবিধা</span>
+          </h4>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            একজন প্রথম শ্রেণি বা এসি বার্থের যাত্রী সর্বোচ্চ ৫৬ কেজি, স্নিগ্ধা ও প্রথম শ্রেণির চেয়ারের যাত্রী ৪০ কেজি, শোভন চেয়ারের যাত্রী ৩৭.৫ কেজি এবং শোভন শ্রেণির যাত্রী ২৮ কেজি মালামাল বিনামূল্যে সঙ্গে নিতে পারেন। অতিরিক্ত মালামালের জন্য পার্সেল বা বুকিং চার্জ প্রযোজ্য।
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 max-w-sm"></div>
+
+  <!-- App Logic -->
+  <script src="/app.js?v=20261103_5"></script>
+</body>
+</html>
+
