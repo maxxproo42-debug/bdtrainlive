@@ -153,9 +153,13 @@
       }
     }
     #leaflet-map {
-      touch-action: pan-x pan-y pinch-zoom !important;
+      cursor: grab;
       -webkit-user-select: none;
       user-select: none;
+    }
+    #leaflet-map:active,
+    #leaflet-map.leaflet-drag-target {
+      cursor: grabbing;
     }
     .mobile-nav-drawer {
       display: none;
@@ -524,7 +528,7 @@
       <div id="map-main-wrapper" class="glass-card rounded-2xl overflow-hidden border-slate-800 shadow-2xl relative transition-all duration-300">
         <!-- Perspective Viewport for Smooth Google Satellite & Landscape -->
         <div id="map-3d-viewport" class="w-full h-[65vh] min-h-[460px] max-h-[620px] md:h-[780px] lg:h-[840px] overflow-hidden relative transition-all duration-300">
-          <div id="leaflet-map" class="w-full h-full bg-slate-950 z-10" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0; touch-action: none;"></div>
+          <div id="leaflet-map" class="w-full h-full bg-slate-950 z-10" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0;"></div>
         </div>
         
         <!-- Floating Live Train Tracking Area & Track Zoom HUD (Ultra sleek on mobile!) -->
@@ -557,29 +561,37 @@
         <!-- 360-Degree Interactive Rotation, 3D Tilt & Theater HUD (Touch friendly on mobile!) -->
         <div class="absolute bottom-2 right-2 md:bottom-4 md:right-4 z-20 flex flex-col items-end gap-1.5 max-w-[calc(100vw-16px)]">
           <div class="flex items-center gap-1 bg-slate-950/90 backdrop-blur-md p-1 md:p-1.5 rounded-xl md:rounded-2xl border border-slate-700/80 shadow-2xl overflow-x-auto max-w-full scrollbar-none">
-            <!-- Gatishil Style: Follow Live Train Camera Toggle -->
-            <button onclick="toggleAutoFollowTrain()" id="btn-follow-train" title="ট্রেনের সাথে ক্যামেরা স্বয়ংক্রিয়ভাবে এগিয়ে যাবে" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 text-[11px] md:text-xs font-bold flex items-center gap-1 transition shadow-lg flex-shrink-0">
-              <span>⌖ ফলো ট্রেন</span>
+            <!-- Free Move vs Follow Live Train Camera Toggle -->
+            <button onclick="toggleAutoFollowTrain()" id="btn-follow-train" title="ফ্রি ম্যাপ মুভ ও ট্রেনের সাথে লক ক্যামেরা টগল করুন" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-700 text-[11px] md:text-xs font-bold flex items-center gap-1 transition flex-shrink-0">
+              <span>🌐 ফ্রি ম্যাপ মুভ</span>
             </button>
-            <!-- 3D Tilt Toggle -->
-            <button onclick="cycleMapTilt()" id="btn-map-tilt" title="৩D অবলিক টিল্ট অ্যাঙ্গেল পরিবর্তন" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 border border-slate-700 text-[11px] md:text-xs font-bold flex items-center gap-1 transition flex-shrink-0">
-              <span>📐 ৩D</span>
+            <!-- 3D Drone Perspective Tilt Toggle -->
+            <button onclick="cycleMapTilt()" id="btn-map-tilt" title="৩D অবলিক ড্রোন টিল্ট পরিবর্তন" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 border border-slate-700 text-[11px] md:text-xs font-bold flex items-center gap-1 transition flex-shrink-0">
+              <span>📐 ৩D ড্রোন</span>
+            </button>
+            <!-- 360 Auto Orbit Drone -->
+            <button onclick="toggleMapAutoOrbit()" id="btn-map-auto-orbit" title="৩৬০° অটো ড্রোন অরবিট সক্রিয় করুন" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white border border-cyan-500/30 text-[11px] md:text-xs font-bold flex items-center gap-1 transition flex-shrink-0">
+              <span>🔄 ৩৬০° ড্রোন</span>
             </button>
             <!-- Reset North -->
-            <button onclick="resetMapToNorth()" title="উত্তর দিক (০°) রিসেট করুন" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-[11px] md:text-xs font-bold flex items-center gap-1 transition flex-shrink-0">
+            <button onclick="resetMapToNorth()" title="উত্তর দিক (০°) ও সমতল রিসেট করুন" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-[11px] md:text-xs font-bold flex items-center gap-1 transition flex-shrink-0">
               <span id="map-compass-needle" class="inline-block transition-transform duration-300">🧭</span>
               <span id="map-compass-degree">০°</span>
             </button>
-            <!-- Desktop extras -->
-            <button onclick="toggleMapTheaterMode()" id="btn-map-theater" title="বড় ম্যাপ ভিউ / ফুল স্ক্রিন টগল করুন" class="hidden sm:flex px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white border border-cyan-500/40 text-[11px] md:text-xs font-bold items-center gap-1 transition flex-shrink-0">
+            <!-- Rotate Left -->
+            <button onclick="rotateMapStep(-45)" title="বামে ৪৫° ঘোরান (অথবা মাউস রাইট ক্লিক চেপে ঘুরিয়ে দেখুন)" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-[11px] md:text-xs font-bold transition flex items-center gap-0.5 flex-shrink-0">
+              <span>↺</span>
+              <span class="text-[10px]">বামে</span>
+            </button>
+            <!-- Rotate Right -->
+            <button onclick="rotateMapStep(45)" title="ডানে ৪৫° ঘোরান (অথবা মাউস রাইট ক্লিক চেপে ঘুরিয়ে দেখুন)" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-[11px] md:text-xs font-bold transition flex items-center gap-0.5 flex-shrink-0">
+              <span>↻</span>
+              <span class="text-[10px]">ডানে</span>
+            </button>
+            <!-- Desktop/Mobile extras -->
+            <button onclick="toggleMapTheaterMode()" id="btn-map-theater" title="বড় ম্যাপ ভিউ / ফুল স্ক্রিন টগল করুন" class="px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white border border-cyan-500/40 text-[11px] md:text-xs font-bold flex items-center gap-1 transition flex-shrink-0">
               <span id="theater-icon">⛶</span>
               <span id="theater-label">বড় ম্যাপ</span>
-            </button>
-            <button onclick="rotateMapStep(-45)" title="বামে ৪৫° ঘোরান" class="hidden md:flex p-1 px-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex-shrink-0">
-              <span>↺</span>
-            </button>
-            <button onclick="rotateMapStep(45)" title="ডানে ৪৫° ঘোরান" class="hidden md:flex p-1 px-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition flex-shrink-0">
-              <span>↻</span>
             </button>
           </div>
         </div>

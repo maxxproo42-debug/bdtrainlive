@@ -17,7 +17,8 @@ let trainMarkers = {};
 let stationMarkers = [];
 let routePolyline = null;
 let routePolylineCasing = null;
-let isAutoFollowTrain = true;
+let routePolylineHalo = null;
+let isAutoFollowTrain = false; // Default to Free Move Mode so user can pan/zoom anywhere smoothly
 let mapAutoRefreshInterval = null;
 let watcherRunning = false;
 let watcherInterval = null;
@@ -133,14 +134,61 @@ function initLeafletSatelliteMap() {
         tap: false,
         scrollWheelZoom: true,
         doubleClickZoom: true,
+        boxZoom: true,
+        keyboard: true,
         bounceAtZoomLimits: false,
         inertia: true,
         inertiaDeceleration: 3000
     });
 
-    // Mobile & Touchscreen 2-Finger Rotation Gesture Handler
+    // Auto-Disengage Follow Train on ANY Manual Interaction (Drag, Move, Zoom)
+    leafletMap.on('dragstart movestart zoomstart', () => {
+        if (isAutoFollowTrain) {
+            setAutoFollowTrain(false, false);
+        }
+    });
+
     const mapDiv = document.getElementById('leaflet-map');
+
+    // Desktop Mouse 360-Degree Camera Drag Rotation (Right-Click Drag OR Shift + Left-Click Drag)
     if (mapDiv) {
+        let isRotatingCamera = false;
+        let rotateStartX = 0;
+        let startAngle = 0;
+
+        mapDiv.addEventListener('contextmenu', (e) => {
+            // Prevent context menu inside map to enable smooth right-click camera rotation
+            e.preventDefault();
+        });
+
+        mapDiv.addEventListener('mousedown', (e) => {
+            // Right-click (button 2) or Shift + Left Click
+            if (e.button === 2 || (e.button === 0 && e.shiftKey)) {
+                isRotatingCamera = true;
+                rotateStartX = e.clientX;
+                startAngle = mapBearing || 0;
+                mapDiv.style.cursor = 'ew-resize';
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isRotatingCamera) {
+                const deltaX = e.clientX - rotateStartX;
+                mapBearing = (startAngle + deltaX * 0.45 + 360) % 360;
+                applyMap3DTransform();
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (isRotatingCamera) {
+                isRotatingCamera = false;
+                mapDiv.style.cursor = '';
+            }
+        });
+
+        // Mobile & Touchscreen 2-Finger Rotation Gesture Handler
         let initialAngle = null;
         let initialBearing = 0;
 
@@ -735,6 +783,11 @@ function clearMapLayers() {
     stationMarkers.forEach(m => leafletMap.removeLayer(m));
     stationMarkers = [];
 
+    if (routePolylineHalo) {
+        leafletMap.removeLayer(routePolylineHalo);
+        routePolylineHalo = null;
+    }
+
     if (routePolylineCasing) {
         leafletMap.removeLayer(routePolylineCasing);
         routePolylineCasing = null;
@@ -801,8 +854,17 @@ async function renderOtherFleetTrainsOnMap(primaryNumber) {
         otherTrains.forEach(t => {
             const marker = L.marker([t.latitude, t.longitude], {
                 icon: createFleetLocomotiveIcon(t),
-                zIndexOffset: 800
+                zIndexOffset: 800,
+                title: `[${t.number}] ${t.name_bn} - ক্লিক করে পুরো রুট ট্র্যাক দেখুন`
             }).addTo(leafletMap);
+
+            // Click directly on train marker to draw its line and switch tracking
+            marker.on('click', (e) => {
+                if (e && e.originalEvent) {
+                    L.DomEvent.stopPropagation(e);
+                }
+                selectTrainOnMap(t.number);
+            });
 
             const photo = getTrainPhoto(t.number);
             marker.bindPopup(`
@@ -882,8 +944,17 @@ async function renderAllRunningTrainsOnMap(isBackground) {
         displayedTrains.forEach(t => {
             const isArrived = t.status === 'ARRIVED';
             const marker = L.marker([t.latitude, t.longitude], {
-                icon: createRealisticLocomotiveIcon(t.number, t.is_running, isArrived)
+                icon: createRealisticLocomotiveIcon(t.number, t.is_running, isArrived),
+                title: `[${t.number}] ${t.name_bn} - ক্লিক করে পুরো রুট ট্র্যাক দেখুন`
             }).addTo(leafletMap);
+
+            // Direct click on any train marker to display its route line and track
+            marker.on('click', (e) => {
+                if (e && e.originalEvent) {
+                    L.DomEvent.stopPropagation(e);
+                }
+                selectTrainOnMap(t.number);
+            });
 
             const photo = getTrainPhoto(t.number);
             const statusLabel = t.is_running 
@@ -1052,28 +1123,42 @@ async function renderSingleTrainOnMap(trainNumber, isBackground) {
                 currentTrainStoppages.map(s => `<option value="${s}">${s}</option>`).join('');
         }
 
-        // 2. Render Polyline Track (Strict physical railway track geometry with Gatishil White Casing + Crimson Core)
+        // 2. Render Polyline Track (Physical railway geometry with Glowing Neon Halo + Crisp Ballast Casing + Crimson Core)
         const polylinePoints = coords.map(c => [c.lat, c.lng]);
         if (polylinePoints.length > 1) {
-            // Layer 1: Outer crisp white casing
+            // Layer 1: Outer glowing neon Cyan/Emerald halo
+            routePolylineHalo = L.polyline(polylinePoints, {
+                color: '#06b6d4',
+                weight: 10,
+                opacity: 0.45,
+                lineCap: 'round',
+                lineJoin: 'round',
+                interactive: false
+            }).addTo(leafletMap);
+
+            // Layer 2: High-contrast crisp white track bed casing
             routePolylineCasing = L.polyline(polylinePoints, {
                 color: '#ffffff',
-                weight: 6.5,
+                weight: 6,
                 opacity: 0.95,
                 lineCap: 'round',
                 lineJoin: 'round',
                 interactive: false
             }).addTo(leafletMap);
 
-            // Layer 2: Inner vibrant crimson core line
+            // Layer 3: Vibrant Crimson / Rose core line
             routePolyline = L.polyline(polylinePoints, {
-                color: '#be123c',
-                weight: 3.5,
+                color: '#e11d48',
+                weight: 3.2,
                 opacity: 1.0,
                 lineCap: 'round',
                 lineJoin: 'round',
-                interactive: false
+                interactive: true
             }).addTo(leafletMap);
+
+            routePolyline.bindTooltip(`🚆 [${live.number}] ${live.name_bn}: ${live.origin} ➔ ${live.destination} (সম্পূর্ণ রেলপথ লাইন)`, {
+                sticky: true
+            });
         }
 
         // 3. Render Stations along track (with high-visibility glowing target for next stoppage)
@@ -1148,9 +1233,11 @@ async function renderSingleTrainOnMap(trainNumber, isBackground) {
         startLiveTrainMotionLoop(live, coords, false);
         renderOtherFleetTrainsOnMap(live.number);
 
-        // 6. Smooth Pan/Zoom & Journey Direction Alignment (Bottom to Top)
-        leafletMap.setView([live.latitude, live.longitude], 10, { animate: true });
-        alignMapToJourneyDirection(live);
+        // 6. Smooth Pan/Zoom (Foreground initial selection only, never forces user during background polling)
+        if (!isBackground) {
+            leafletMap.setView([live.latitude, live.longitude], 10, { animate: true });
+            alignMapToJourneyDirection(live);
+        }
     } catch (e) {
         console.error('Failed to load single train live location:', e);
     }
@@ -2297,23 +2384,32 @@ function zoomToLiveTrainTrack() {
 // ==============================================================================
 let isJourneyTrackUpMode = false; // Standard clean North-Up view (zero inverted text or upside-down tiles)
 
-function toggleAutoFollowTrain() {
-    isAutoFollowTrain = !isAutoFollowTrain;
+function toBnDigits(num) {
+    const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+    return String(num).replace(/[0-9]/g, d => bn[parseInt(d)]);
+}
+
+function setAutoFollowTrain(enable, showFeedback = true) {
+    isAutoFollowTrain = !!enable;
     const btn = document.getElementById('btn-follow-train') || document.getElementById('btn-journey-view');
     if (btn) {
         if (isAutoFollowTrain) {
-            btn.className = 'px-2.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 text-xs font-bold flex items-center gap-1 transition shadow-lg animate-pulse';
-            btn.innerHTML = `<span>⌖ ট্রেনের সাথে চলুন (সক্রিয়)</span>`;
+            btn.className = 'px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 text-[11px] md:text-xs font-bold flex items-center gap-1 transition shadow-lg animate-pulse flex-shrink-0';
+            btn.innerHTML = `<span>⌖ ফলো ট্রেন (লকড)</span>`;
             if (lastTrackedTrainLat && lastTrackedTrainLng && leafletMap) {
                 leafletMap.panTo([lastTrackedTrainLat, lastTrackedTrainLng], { animate: true });
             }
-            showToast('⌖ ট্রেনের সাথে ক্যামেরা স্বয়ংক্রিয়ভাবে অনুসরণ করছে', 'success');
+            if (showFeedback) showToast('⌖ ট্রেনের সাথে ক্যামেরা স্বয়ংক্রিয়ভাবে অনুসরণ করছে', 'success');
         } else {
-            btn.className = 'px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-bold flex items-center gap-1 transition';
-            btn.innerHTML = `<span>⌖ ট্রেনের সাথে চলুন</span>`;
-            showToast('🌐 ক্যামেরা ফ্রি মুভ মোডে সেট করা হয়েছে', 'info');
+            btn.className = 'px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-700 text-[11px] md:text-xs font-bold flex items-center gap-1 transition flex-shrink-0';
+            btn.innerHTML = `<span>🌐 ফ্রি ম্যাপ মুভ</span>`;
+            if (showFeedback) showToast('🌐 ফ্রি মুভ মোড: ম্যাপ টেনে ও জুম করে ইচ্ছামতো ঘুরে দেখুন', 'info');
         }
     }
+}
+
+function toggleAutoFollowTrain() {
+    setAutoFollowTrain(!isAutoFollowTrain, true);
 }
 
 // Keep map upright and smooth (no upside down text, zero inverted drags)
@@ -2362,10 +2458,24 @@ function applyMap3DTransform() {
         viewport.style.perspective = '1200px';
         mapEl.style.transform = `rotateX(${mapTilt}deg) rotateZ(${mapBearing}deg)`;
         mapEl.style.transformOrigin = 'center center';
+    } else if (mapBearing !== 0) {
+        viewport.style.perspective = 'none';
+        mapEl.style.transform = `rotateZ(${mapBearing}deg)`;
+        mapEl.style.transformOrigin = 'center center';
     } else {
         viewport.style.perspective = 'none';
-        mapEl.style.transform = mapBearing ? `rotateZ(${mapBearing}deg)` : 'none';
+        mapEl.style.transform = 'none';
         mapEl.style.transformOrigin = 'center center';
+    }
+
+    // Live Compass Needle & Degree Indicator UI
+    const needle = document.getElementById('map-compass-needle');
+    const deg = document.getElementById('map-compass-degree');
+    if (needle) {
+        needle.style.transform = `rotate(${-mapBearing}deg)`;
+    }
+    if (deg) {
+        deg.textContent = `${toBnDigits(Math.round(mapBearing))}°`;
     }
 }
 
