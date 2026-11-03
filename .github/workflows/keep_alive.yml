@@ -1,0 +1,53 @@
+name: 24/7 Render Keep-Alive & Session Pre-Warmer
+
+on:
+  schedule:
+    # Runs every 10 minutes at offset minutes to avoid Render free-tier sleep (sleep timeout is 15 mins)
+    - cron: '3,13,23,33,43,53 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep_alive:
+    name: Ping & Pre-Warm Render Engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping Health Endpoint (Render URL)
+        run: |
+          RENDER_HOST="${{ secrets.RENDER_URL }}"
+          if [ -z "$RENDER_HOST" ]; then
+            RENDER_HOST="https://bdtrainlive.onrender.com"
+          fi
+          echo "Pinging $RENDER_HOST/api/health..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$RENDER_HOST/api/health")
+          echo "Health Endpoint Status: $STATUS"
+
+      - name: Pre-Warm Live Train Tracking Engine (Chilahati Express 800)
+        run: |
+          RENDER_HOST="${{ secrets.RENDER_URL }}"
+          if [ -z "$RENDER_HOST" ]; then
+            RENDER_HOST="https://bdtrainlive.onrender.com"
+          fi
+          echo "Pre-warming live tracking endpoint for Train 800..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$RENDER_HOST/api/live_location?train=800")
+          echo "Train 800 Live Tracker Status: $STATUS"
+
+      - name: Pre-Warm Fleet Tracker Engine
+        run: |
+          RENDER_HOST="${{ secrets.RENDER_URL }}"
+          if [ -z "$RENDER_HOST" ]; then
+            RENDER_HOST="https://bdtrainlive.onrender.com"
+          fi
+          echo "Pre-warming all live running trains..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$RENDER_HOST/api/all_live_trains")
+          echo "All Live Trains Status: $STATUS"
+
+      - name: Ping Frontend UI Portal
+        run: |
+          RENDER_HOST="${{ secrets.RENDER_URL }}"
+          if [ -z "$RENDER_HOST" ]; then
+            RENDER_HOST="https://bdtrainlive.onrender.com"
+          fi
+          echo "Pinging main frontend portal..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$RENDER_HOST/")
+          echo "Frontend UI Portal Status: $STATUS"

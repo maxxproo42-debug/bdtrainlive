@@ -98,8 +98,18 @@ class BDRailAPIHandler(SimpleHTTPRequestHandler):
         path = parsed_url.path
         query = urllib.parse.parse_qs(parsed_url.query)
 
+        # API: Health Check (Render 24/7 Keep-Alive & Monitoring)
+        if path == "/api/health" or path == "/health":
+            self.send_json_response({
+                "status": "healthy",
+                "service": "BD Rail Assistant",
+                "uptime": "online",
+                "server_time": get_current_bd_time().strftime("%Y-%m-%d %I:%M:%S %p")
+            })
+            return
+
         # API: Get Station List
-        if path == "/api/stations":
+        elif path == "/api/stations":
             self.send_json_response(STATIONS)
             return
 
