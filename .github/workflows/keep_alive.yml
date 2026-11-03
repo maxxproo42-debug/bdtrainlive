@@ -51,3 +51,4 @@ jobs:
           echo "Pinging main frontend portal..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$RENDER_HOST/")
           echo "Frontend UI Portal Status: $STATUS"
+
