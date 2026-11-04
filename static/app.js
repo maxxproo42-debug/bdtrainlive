@@ -396,7 +396,303 @@ function populateStationDropdowns(stations) {
     if (originSelect) originSelect.value = "Dinajpur";
     if (destSelect) destSelect.value = "Rajshahi";
     if (boardSelect) boardSelect.value = "Dinajpur";
+
+    // Initialize Searchable Typeahead Inputs for From & To
+    initStationSearchInputs(stations);
 }
+
+// --- SEARCHABLE TYPEAHEAD STATIONS COMPONENT (From & To) ---
+const POPULAR_STATION_NAMES = [
+    "Dhaka", "Chittagong", "Rajshahi", "Dinajpur", "Saidpur", "Chilahati", 
+    "Sylhet", "Khulna", "Cox's Bazar", "Rangpur", "Santahar", "Ishwardi", "Bogura"
+];
+
+function initStationSearchInputs(stations) {
+    const originInput = document.getElementById('origin-input');
+    const destInput = document.getElementById('destination-input');
+    const originSelect = document.getElementById('origin-select');
+    const destSelect = document.getElementById('destination-select');
+
+    const stns = stations || allStations || [];
+
+    if (originSelect && originInput) {
+        const origStn = stns.find(s => s.name_en === originSelect.value);
+        if (origStn) {
+            originInput.value = `${origStn.name_bn} (${origStn.name_en})`;
+            const clr = document.getElementById('origin-clear-btn');
+            if (clr) clr.classList.remove('hidden');
+        }
+    }
+
+    if (destSelect && destInput) {
+        const destStn = stns.find(s => s.name_en === destSelect.value);
+        if (destStn) {
+            destInput.value = `${destStn.name_bn} (${destStn.name_en})`;
+            const clr = document.getElementById('dest-clear-btn');
+            if (clr) clr.classList.remove('hidden');
+        }
+    }
+}
+
+function resolveStationFromQuery(query) {
+    if (!query || !allStations || allStations.length === 0) return null;
+    const q = query.trim().toLowerCase();
+
+    // 1. Exact match on English name or Bengali name or Code
+    let match = allStations.find(s => s.name_en.toLowerCase() === q || s.name_bn.toLowerCase() === q || (s.code && s.code.toLowerCase() === q));
+    if (match) return match;
+
+    // 2. Formatted match like "দিনাজপুর (Dinajpur)"
+    match = allStations.find(s => `${s.name_bn} (${s.name_en})`.toLowerCase() === q || `${s.name_bn} (${s.name_en})`.toLowerCase().includes(q));
+    if (match) return match;
+
+    // 3. Starts-with match
+    match = allStations.find(s => s.name_en.toLowerCase().startsWith(q) || s.name_bn.toLowerCase().startsWith(q));
+    if (match) return match;
+
+    // 4. Includes match
+    match = allStations.find(s => s.name_en.toLowerCase().includes(q) || s.name_bn.toLowerCase().includes(q));
+    if (match) return match;
+
+    return null;
+}
+
+function onStationSearchInput(type, query) {
+    const dropdown = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-search-dropdown`);
+    const clearBtn = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-clear-btn`);
+    if (!dropdown) return;
+
+    if (clearBtn) {
+        if (query && query.trim()) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+    }
+
+    const q = (query || '').trim().toLowerCase();
+    const stations = allStations || [];
+
+    let matched = [];
+    if (!q) {
+        // Show popular hubs followed by others
+        const popular = stations.filter(s => POPULAR_STATION_NAMES.includes(s.name_en));
+        const others = stations.filter(s => !POPULAR_STATION_NAMES.includes(s.name_en));
+        matched = [...popular, ...others];
+    } else {
+        matched = stations.filter(s => {
+            return s.name_en.toLowerCase().includes(q) ||
+                   s.name_bn.toLowerCase().includes(q) ||
+                   (s.code && s.code.toLowerCase().includes(q)) ||
+                   (s.division && s.division.toLowerCase().includes(q));
+        });
+
+        // Priority sort: exact > starts-with > alphabetical
+        matched.sort((a, b) => {
+            const aExact = a.name_en.toLowerCase() === q || a.name_bn.toLowerCase() === q;
+            const bExact = b.name_en.toLowerCase() === q || b.name_bn.toLowerCase() === q;
+            if (aExact && !bExact) return -1;
+            if (!aExact && bExact) return 1;
+
+            const aStarts = a.name_en.toLowerCase().startsWith(q) || a.name_bn.toLowerCase().startsWith(q);
+            const bStarts = b.name_en.toLowerCase().startsWith(q) || b.name_bn.toLowerCase().startsWith(q);
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
+
+            return a.name_bn.localeCompare(b.name_bn);
+        });
+    }
+
+    if (matched.length === 0) {
+        dropdown.innerHTML = `
+            <div class="p-4 text-center text-slate-400 text-xs">
+                <span>'${query}' নামের কোনো স্টেশন পাওয়া যায়নি</span>
+                <p class="text-[10px] text-slate-500 mt-1">অনুগ্রহ করে বানান চেক করুন বা নিচের ড্রপডাউন থেকে বাছুন</p>
+            </div>
+        `;
+        dropdown.classList.remove('hidden');
+        return;
+    }
+
+    let html = `
+        <div class="p-2 bg-slate-900/95 sticky top-0 border-b border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-semibold z-10 backdrop-blur-md">
+            <span>${q ? `'${query}' মিল (${matched.length}টি স্টেশন)` : 'জনপ্রিয় ও সকল রেল স্টেশন'}</span>
+            <span class="text-[10px] text-emerald-400 font-mono">ক্লিক করে নির্বাচন করুন</span>
+        </div>
+    `;
+
+    matched.slice(0, 35).forEach(s => {
+        const isPopular = POPULAR_STATION_NAMES.includes(s.name_en);
+        const accentClass = type === 'origin' ? 'group-hover:bg-emerald-600' : 'group-hover:bg-rose-600';
+        const textAccent = type === 'origin' ? 'group-hover:text-emerald-300' : 'group-hover:text-rose-300';
+        html += `
+            <div class="px-3 py-2 hover:bg-slate-800/90 cursor-pointer flex items-center justify-between transition group active:bg-slate-900" onclick="selectStationFromSearch('${type}', '${s.name_en}', '${s.name_bn}')">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-lg ${isPopular ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700/60'} flex items-center justify-center text-xs group-hover:scale-105 transition">
+                        ${isPopular ? '⭐' : '📍'}
+                    </span>
+                    <div>
+                        <div class="text-xs font-bold text-white ${textAccent} flex items-center gap-1.5">
+                            <span>${s.name_bn}</span>
+                            <span class="text-[11px] font-mono font-medium text-slate-400">(${s.name_en})</span>
+                            ${s.code ? `<span class="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-cyan-300 border border-slate-700">${s.code}</span>` : ''}
+                        </div>
+                        <div class="text-[10px] text-slate-400">
+                            ${s.division ? s.division + ' বিভাগ' : 'বাংলাদেশ রেলওয়ে'}
+                        </div>
+                    </div>
+                </div>
+                <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 ${accentClass} group-hover:text-white font-medium transition flex items-center gap-1">
+                    <span>বাছুন</span>
+                    <span>➔</span>
+                </span>
+            </div>
+        `;
+    });
+
+    if (matched.length > 35) {
+        html += `
+            <div class="p-2 text-center text-[10px] text-slate-400 bg-slate-900/80">
+                আরো ${matched.length - 35}টি স্টেশন রয়েছে — নির্দিষ্ট করতে আরো অক্ষর লিখুন
+            </div>
+        `;
+    }
+
+    dropdown.innerHTML = html;
+    dropdown.classList.remove('hidden');
+}
+
+function onStationSearchFocus(type) {
+    const input = document.getElementById(`${type === 'origin' ? 'origin' : 'destination'}-input`);
+    const otherDropdown = document.getElementById(`${type === 'origin' ? 'dest' : 'origin'}-search-dropdown`);
+    if (otherDropdown) otherDropdown.classList.add('hidden');
+
+    onStationSearchInput(type, input ? input.value : '');
+}
+
+function onStationSearchKeyDown(event, type) {
+    if (event.key === 'Escape') {
+        const dropdown = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-search-dropdown`);
+        if (dropdown) dropdown.classList.add('hidden');
+    } else if (event.key === 'Enter') {
+        event.preventDefault();
+        const input = document.getElementById(`${type === 'origin' ? 'origin' : 'destination'}-input`);
+        if (input && input.value.trim()) {
+            const resolved = resolveStationFromQuery(input.value);
+            if (resolved) {
+                selectStationFromSearch(type, resolved.name_en, resolved.name_bn);
+            }
+        }
+        const dropdown = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-search-dropdown`);
+        if (dropdown) dropdown.classList.add('hidden');
+        handleSearch();
+    }
+}
+
+function selectStationFromSearch(type, nameEn, nameBn) {
+    const input = document.getElementById(`${type === 'origin' ? 'origin' : 'destination'}-input`);
+    const select = document.getElementById(`${type === 'origin' ? 'origin' : 'destination'}-select`);
+    const dropdown = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-search-dropdown`);
+    const clearBtn = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-clear-btn`);
+
+    if (input) input.value = `${nameBn} (${nameEn})`;
+    if (select) select.value = nameEn;
+    if (dropdown) dropdown.classList.add('hidden');
+    if (clearBtn) clearBtn.classList.remove('hidden');
+
+    showToast(`📍 ${nameBn} (${nameEn}) নির্বাচন করা হয়েছে`, 'info');
+}
+
+function onStationSelectChange(type) {
+    const input = document.getElementById(`${type === 'origin' ? 'origin' : 'destination'}-input`);
+    const select = document.getElementById(`${type === 'origin' ? 'origin' : 'destination'}-select`);
+    const clearBtn = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-clear-btn`);
+
+    if (select && input) {
+        const stn = (allStations || []).find(s => s.name_en === select.value);
+        if (stn) {
+            input.value = `${stn.name_bn} (${stn.name_en})`;
+            if (clearBtn) clearBtn.classList.remove('hidden');
+        } else {
+            input.value = select.value;
+        }
+    }
+}
+
+function clearStationInput(type) {
+    const input = document.getElementById(`${type === 'origin' ? 'origin' : 'destination'}-input`);
+    const clearBtn = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-clear-btn`);
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+    if (clearBtn) clearBtn.classList.add('hidden');
+    onStationSearchInput(type, '');
+}
+
+// --- QUICK STOPPAGE FILTER FOR STATION SCANNER (From & To) ---
+function onStationScanStoppageFilter(type, query) {
+    const select = document.getElementById(type === 'from' ? 'station-scan-from-select' : 'station-scan-dest-select');
+    const clearBtn = document.getElementById(type === 'from' ? 'station-scan-from-clear' : 'station-scan-dest-clear');
+    if (!select) return;
+
+    if (clearBtn) {
+        if (query && query.trim()) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+    }
+
+    const q = (query || '').trim().toLowerCase();
+    const options = Array.from(select.options);
+
+    let firstMatch = null;
+    options.forEach(opt => {
+        if (!opt.value) {
+            opt.hidden = false;
+            return;
+        }
+        const text = opt.textContent.toLowerCase();
+        const val = opt.value.toLowerCase();
+        const matches = !q || text.includes(q) || val.includes(q);
+        opt.hidden = !matches;
+        if (matches && !firstMatch && opt.value) {
+            firstMatch = opt;
+        }
+    });
+
+    if (firstMatch && q) {
+        select.value = firstMatch.value;
+        if (type === 'from') onStationScanFromChange();
+        else runStationTicketScan();
+    }
+}
+
+function clearStationScanStoppageInput(type) {
+    const input = document.getElementById(type === 'from' ? 'station-scan-from-input' : 'station-scan-dest-input');
+    const clearBtn = document.getElementById(type === 'from' ? 'station-scan-from-clear' : 'station-scan-dest-clear');
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+    if (clearBtn) clearBtn.classList.add('hidden');
+    onStationScanStoppageFilter(type, '');
+}
+
+// Global outside click listener to close floating station search dropdowns
+document.addEventListener('click', function(e) {
+    const originBox = document.getElementById('origin-station-box');
+    const destBox = document.getElementById('dest-station-box');
+    const originDropdown = document.getElementById('origin-search-dropdown');
+    const destDropdown = document.getElementById('dest-search-dropdown');
+
+    if (originDropdown && !originDropdown.classList.contains('hidden')) {
+        if (originBox && !originBox.contains(e.target)) {
+            originDropdown.classList.add('hidden');
+        }
+    }
+
+    if (destDropdown && !destDropdown.classList.contains('hidden')) {
+        if (destBox && !destBox.contains(e.target)) {
+            destDropdown.classList.add('hidden');
+        }
+    }
+});
 
 // Map Train Change Handler
 function onMapTrainChange() {
@@ -1731,8 +2027,29 @@ function showRakeCoachDetail(code, name, classType, totalSeats, availableSeats) 
 async function handleSearch(e) {
     if (e) e.preventDefault();
 
-    const origin = document.getElementById('origin-select').value;
-    const dest = document.getElementById('destination-select').value;
+    // Auto-resolve any manually typed station text
+    const originInput = document.getElementById('origin-input');
+    const destInput = document.getElementById('destination-input');
+    const originSelect = document.getElementById('origin-select');
+    const destSelect = document.getElementById('destination-select');
+
+    if (originInput && originInput.value.trim() && originSelect) {
+        const resolved = resolveStationFromQuery(originInput.value);
+        if (resolved) {
+            originSelect.value = resolved.name_en;
+            originInput.value = `${resolved.name_bn} (${resolved.name_en})`;
+        }
+    }
+    if (destInput && destInput.value.trim() && destSelect) {
+        const resolved = resolveStationFromQuery(destInput.value);
+        if (resolved) {
+            destSelect.value = resolved.name_en;
+            destInput.value = `${resolved.name_bn} (${resolved.name_en})`;
+        }
+    }
+
+    const origin = originSelect ? originSelect.value : 'Dhaka';
+    const dest = destSelect ? destSelect.value : 'Dinajpur';
     const date = document.getElementById('journey-date').value;
 
     const container = document.getElementById('train-cards-container');
@@ -2036,9 +2353,21 @@ function viewOnLiveMap(trainNum) {
 function swapStations() {
     const origin = document.getElementById('origin-select');
     const dest = document.getElementById('destination-select');
-    const temp = origin.value;
-    origin.value = dest.value;
-    dest.value = temp;
+    const originInput = document.getElementById('origin-input');
+    const destInput = document.getElementById('destination-input');
+
+    if (origin && dest) {
+        const temp = origin.value;
+        origin.value = dest.value;
+        dest.value = temp;
+    }
+
+    if (originInput && destInput) {
+        const tempText = originInput.value;
+        originInput.value = destInput.value;
+        destInput.value = tempText;
+    }
+
     handleSearch();
 }
 
@@ -4021,6 +4350,11 @@ function onStationScanTrainChange() {
         fromSelect.innerHTML = fromHtml;
     }
 
+    const fromInput = document.getElementById('station-scan-from-input');
+    const destInput = document.getElementById('station-scan-dest-input');
+    if (fromInput) fromInput.value = '';
+    if (destInput) destInput.value = '';
+
     // 2. Populate Destination Select
     if (destSelect) {
         let destHtml = `<option value="">শেষ গন্তব্য (${train ? train.destination : 'Default'})</option>`;
@@ -4061,6 +4395,8 @@ function onStationScanFromChange() {
     const trainSelect = document.getElementById('station-scan-train-select');
     const fromSelect = document.getElementById('station-scan-from-select');
     const destSelect = document.getElementById('station-scan-dest-select');
+    const fromInput = document.getElementById('station-scan-from-input');
+    const clearBtn = document.getElementById('station-scan-from-clear');
     if (!trainSelect || !fromSelect || !destSelect) return;
 
     const trainNum = trainSelect.value || '766';
@@ -4068,6 +4404,17 @@ function onStationScanFromChange() {
     const stoppages = train ? (train.stoppages || []) : [];
     
     const selectedFrom = fromSelect.value;
+    if (fromInput) {
+        if (selectedFrom) {
+            const stnBn = (stationsGeo && stationsGeo[selectedFrom]) ? stationsGeo[selectedFrom].name_bn : selectedFrom;
+            fromInput.value = `${stnBn} (${selectedFrom})`;
+            if (clearBtn) clearBtn.classList.remove('hidden');
+        } else {
+            fromInput.value = '';
+            if (clearBtn) clearBtn.classList.add('hidden');
+        }
+    }
+
     let fromIdx = 0;
     if (selectedFrom) {
         fromIdx = stoppages.indexOf(selectedFrom);
@@ -4088,8 +4435,15 @@ function onStationScanFromChange() {
 
 function setStationScanFromFilter(stationName) {
     const fromSelect = document.getElementById('station-scan-from-select');
+    const fromInput = document.getElementById('station-scan-from-input');
+    const clearBtn = document.getElementById('station-scan-from-clear');
     if (fromSelect) {
         fromSelect.value = stationName;
+        if (fromInput) {
+            const stnBn = (stationsGeo && stationsGeo[stationName]) ? stationsGeo[stationName].name_bn : stationName;
+            fromInput.value = `${stnBn} (${stationName})`;
+            if (clearBtn) clearBtn.classList.remove('hidden');
+        }
         onStationScanFromChange();
         showToast(`📍 প্রারম্ভিক স্টেশন ${stationName} সেট করা হয়েছে`, 'info');
     }

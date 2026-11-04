@@ -1012,12 +1012,38 @@
         <!-- Search Form -->
         <form id="search-form" onsubmit="handleSearch(event)" class="mt-6 grid grid-cols-1 md:grid-cols-12 gap-3 bg-slate-900/90 p-4 rounded-xl border border-slate-700/60">
           
-          <!-- Origin Station -->
-          <div class="md:col-span-3">
-            <label class="block text-xs font-semibold text-slate-400 mb-1">প্রারম্ভিক স্টেশন (From)</label>
+          <!-- Origin Station (Searchable Typeahead + Underlying Full Select) -->
+          <div class="md:col-span-3 space-y-1.5" id="origin-station-box">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>প্রারম্ভিক স্টেশন (From)</span>
+              </label>
+              <span class="text-[10px] text-emerald-400/90 font-mono font-medium">টাইপ বা বাছুন</span>
+            </div>
             <div class="relative">
-              <i data-lucide="map-pin" class="w-4 h-4 absolute left-3 top-3 text-emerald-400"></i>
-              <select id="origin-select" class="w-full bg-slate-800 text-white text-sm rounded-lg pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500">
+              <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-emerald-400 pointer-events-none z-10"></i>
+              <input 
+                type="text" 
+                id="origin-input" 
+                placeholder="🔍 স্টেশন লিখুন (সৈয়দপুর, Dhaka...)" 
+                class="w-full bg-slate-800 text-white text-xs sm:text-sm rounded-lg pl-9 pr-8 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 font-semibold placeholder-slate-400 shadow-inner"
+                autocomplete="off"
+                oninput="onStationSearchInput('origin', this.value)"
+                onfocus="onStationSearchFocus('origin')"
+                onkeydown="onStationSearchKeyDown(event, 'origin')"
+              />
+              <button type="button" id="origin-clear-btn" onclick="clearStationInput('origin')" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-white text-xs p-1">✕</button>
+
+              <!-- Floating Live Filter Search Dropdown -->
+              <div id="origin-search-dropdown" class="absolute left-0 right-0 top-full mt-1.5 bg-slate-950/98 backdrop-blur-md border border-emerald-500/60 rounded-xl shadow-2xl max-h-64 overflow-y-auto hidden z-50 divide-y divide-slate-800 scrollbar-thin">
+                <!-- Dynamically populated with matched stations -->
+              </div>
+            </div>
+
+            <!-- Underlying Full Dropdown List ("সাথে নিচে auto সব থাকবেই") -->
+            <div class="relative">
+              <select id="origin-select" onchange="onStationSelectChange('origin')" class="w-full bg-slate-900/95 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 border border-slate-700/80 hover:border-emerald-500/50 focus:outline-none focus:border-emerald-500 font-medium">
                 <option value="Dhaka">ঢাকা (কমলাপুর / বিমানবন্দর)</option>
                 <option value="Dinajpur">দিনাজপুর</option>
                 <option value="Panchagarh">পঞ্চগড়</option>
@@ -1035,18 +1061,44 @@
           </div>
 
           <!-- Swap Button -->
-          <div class="md:col-span-1 flex items-end justify-center pb-1">
-            <button type="button" onclick="swapStations()" title="স্টেশন পরিবর্তন করুন" class="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition border border-slate-700">
+          <div class="md:col-span-1 flex items-center justify-center pt-5">
+            <button type="button" onclick="swapStations()" title="প্রারম্ভিক ও গন্তব্য অদল-বদল করুন" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white flex items-center justify-center transition border border-slate-700 shadow-md active:scale-95">
               <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
             </button>
           </div>
 
-          <!-- Destination Station -->
-          <div class="md:col-span-3">
-            <label class="block text-xs font-semibold text-slate-400 mb-1">গন্তব্য স্টেশন (To)</label>
+          <!-- Destination Station (Searchable Typeahead + Underlying Full Select) -->
+          <div class="md:col-span-3 space-y-1.5" id="dest-station-box">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <i data-lucide="navigation" class="w-3.5 h-3.5 text-rose-400"></i>
+                <span>গন্তব্য স্টেশন (To)</span>
+              </label>
+              <span class="text-[10px] text-rose-400/90 font-mono font-medium">টাইপ বা বাছুন</span>
+            </div>
             <div class="relative">
-              <i data-lucide="navigation" class="w-4 h-4 absolute left-3 top-3 text-rose-400"></i>
-              <select id="destination-select" class="w-full bg-slate-800 text-white text-sm rounded-lg pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500">
+              <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-rose-400 pointer-events-none z-10"></i>
+              <input 
+                type="text" 
+                id="destination-input" 
+                placeholder="🔍 গন্তব্য লিখুন (রাজশাহী, Dinajpur...)" 
+                class="w-full bg-slate-800 text-white text-xs sm:text-sm rounded-lg pl-9 pr-8 py-2.5 border border-slate-700 focus:outline-none focus:border-rose-500 font-semibold placeholder-slate-400 shadow-inner"
+                autocomplete="off"
+                oninput="onStationSearchInput('dest', this.value)"
+                onfocus="onStationSearchFocus('dest')"
+                onkeydown="onStationSearchKeyDown(event, 'dest')"
+              />
+              <button type="button" id="dest-clear-btn" onclick="clearStationInput('dest')" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-white text-xs p-1">✕</button>
+
+              <!-- Floating Live Filter Search Dropdown -->
+              <div id="dest-search-dropdown" class="absolute left-0 right-0 top-full mt-1.5 bg-slate-950/98 backdrop-blur-md border border-rose-500/60 rounded-xl shadow-2xl max-h-64 overflow-y-auto hidden z-50 divide-y divide-slate-800 scrollbar-thin">
+                <!-- Dynamically populated with matched stations -->
+              </div>
+            </div>
+
+            <!-- Underlying Full Dropdown List ("সাথে নিচে auto সব থাকবেই") -->
+            <div class="relative">
+              <select id="destination-select" onchange="onStationSelectChange('dest')" class="w-full bg-slate-900/95 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 border border-slate-700/80 hover:border-rose-500/50 focus:outline-none focus:border-rose-500 font-medium">
                 <option value="Dinajpur" selected>দিনাজপুর</option>
                 <option value="Dhaka">ঢাকা (কমলাপুর / বিমানবন্দর)</option>
                 <option value="Panchagarh">পঞ্চগড়</option>
@@ -1274,31 +1326,61 @@
           </div>
 
           <!-- Boarding Station (From) -->
-          <div class="md:col-span-3 space-y-1.5">
-            <label class="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i>
-              <span>কোথা থেকে উঠবেন (From):</span>
-            </label>
+          <div class="md:col-span-3 space-y-1.5" id="station-scan-from-box">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>কোথা থেকে উঠবেন (From):</span>
+              </label>
+              <span class="text-[9px] text-emerald-400 font-mono">টাইপ বা ড্রপডাউন</span>
+            </div>
             <div class="relative">
-              <select id="station-scan-from-select" onchange="onStationScanFromChange()" class="w-full bg-slate-800 text-white text-xs rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 font-semibold shadow-inner">
+              <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none"></i>
+              <input 
+                type="text" 
+                id="station-scan-from-input" 
+                placeholder="🔍 স্টেশনের নাম লিখুন (সৈয়দপুর, সান্তাহার...)" 
+                class="w-full bg-slate-950 text-white text-xs rounded-xl pl-8 pr-7 py-2 border border-slate-700 focus:outline-none focus:border-emerald-500 font-medium placeholder-slate-500 shadow-inner"
+                autocomplete="off"
+                oninput="onStationScanStoppageFilter('from', this.value)"
+              />
+              <button type="button" id="station-scan-from-clear" onclick="clearStationScanStoppageInput('from')" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-white text-xs">✕</button>
+            </div>
+            <div class="relative">
+              <select id="station-scan-from-select" onchange="onStationScanFromChange()" class="w-full bg-slate-800 text-white text-xs rounded-xl px-3 py-2 border border-slate-700 focus:outline-none focus:border-emerald-500 font-semibold shadow-inner">
                 <option value="">সকল প্রারম্ভিক স্টেশন (শুরু থেকে)</option>
               </select>
             </div>
-            <p class="text-[10px] text-slate-400">নির্দিষ্ট স্টেশন সিলেক্ট করলে সেখান থেকে টিকিট দেখাবে</p>
+            <p class="text-[10px] text-slate-400">নির্দিষ্ট স্টেশন টাইপ বা সিলেক্ট করলে সেখান থেকে টিকিট দেখাবে</p>
           </div>
 
           <!-- Target Destination (To) -->
-          <div class="md:col-span-2 space-y-1.5">
-            <label class="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <i data-lucide="navigation" class="w-3.5 h-3.5 text-rose-400"></i>
-              <span>কোথায় নামবেন (To):</span>
-            </label>
+          <div class="md:col-span-2 space-y-1.5" id="station-scan-dest-box">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <i data-lucide="navigation" class="w-3.5 h-3.5 text-rose-400"></i>
+                <span>কোথায় নামবেন (To):</span>
+              </label>
+              <span class="text-[9px] text-rose-400 font-mono">টাইপ বা ড্রপডাউন</span>
+            </div>
             <div class="relative">
-              <select id="station-scan-dest-select" onchange="runStationTicketScan()" class="w-full bg-slate-800 text-white text-xs rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 font-semibold shadow-inner">
+              <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none"></i>
+              <input 
+                type="text" 
+                id="station-scan-dest-input" 
+                placeholder="🔍 গন্তব্য লিখুন (রাজশাহী...)" 
+                class="w-full bg-slate-950 text-white text-xs rounded-xl pl-8 pr-7 py-2 border border-slate-700 focus:outline-none focus:border-rose-500 font-medium placeholder-slate-500 shadow-inner"
+                autocomplete="off"
+                oninput="onStationScanStoppageFilter('dest', this.value)"
+              />
+              <button type="button" id="station-scan-dest-clear" onclick="clearStationScanStoppageInput('dest')" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-white text-xs">✕</button>
+            </div>
+            <div class="relative">
+              <select id="station-scan-dest-select" onchange="runStationTicketScan()" class="w-full bg-slate-800 text-white text-xs rounded-xl px-3 py-2 border border-slate-700 focus:outline-none focus:border-emerald-500 font-semibold shadow-inner">
                 <option value="">শেষ গন্তব্য (Default)</option>
               </select>
             </div>
-            <p class="text-[10px] text-slate-400">নামার স্টেশন পরিবর্তন করতে পারেন</p>
+            <p class="text-[10px] text-slate-400">নামার স্টেশন পরিবর্তন বা টাইপ করতে পারেন</p>
           </div>
 
           <!-- Journey Date -->
