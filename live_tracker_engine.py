@@ -58,12 +58,12 @@ load_gatishil_cache()
 GATISHIL_CORRIDOR_CALIBRATIONS = {
     "800": {
         "train_name": "চিলাহাটি এক্সপ্রেস (ডাউন)",
-        "typical_delay": 90,
-        "active_corridor": "Tangail ➔ Mirzapur ➔ Joydebpur ➔ Dhaka",
-        "anchor_station": "BB Setu East",
-        "next_station": "Joydebpur",
-        "speed": 74,
-        "note": "চিলাহাটি এক্সপ্রেস (৮০০) বর্তমানে টাঙ্গাইল অতিক্রম করে মির্জাপুর-মৌচাক সেকশন দিয়ে জয়দেবপুর জংশন অভিমুখে লাইভ চলছে।"
+        "typical_delay": 45,
+        "active_corridor": "Santahar ➔ Raninagar ➔ Ahsanganj ➔ Natore",
+        "anchor_station": "Raninagar",
+        "next_station": "Ahsanganj",
+        "speed": 72,
+        "note": "চিলাহাটি এক্সপ্রেস (৮০০) সান্তাহার অতিক্রম করে রানীনগর পার হয়ে আহসানগঞ্জের দিকে লাইভ চলছে।"
     },
     "799": {
         "train_name": "চিলাহাটি এক্সপ্রেস (আপ)",
@@ -828,8 +828,11 @@ def calculate_train_live_position(train, current_dt=None):
             else:
                 t_curr = current_minutes
 
+            # Account for authentic operational train delay when mapping position along timetable
+            effective_t_curr = max(dep_origin_m, t_curr - (delay_minutes or 0))
+
             for i, stop in enumerate(schedule):
-                if stop["arr_m"] <= t_curr <= stop["dep_m"]:
+                if stop["arr_m"] <= effective_t_curr <= stop["dep_m"]:
                     is_at_station_dwell = True
                     dwell_station_name = stop["station"]
                     current_dep_str = stop["dep_str"]
@@ -839,16 +842,16 @@ def calculate_train_live_position(train, current_dt=None):
                     break
                 if i < len(schedule) - 1:
                     next_stop = schedule[i+1]
-                    if stop["dep_m"] < t_curr < next_stop["arr_m"]:
+                    if stop["dep_m"] < effective_t_curr < next_stop["arr_m"]:
                         dur = max(1, next_stop["arr_m"] - stop["dep_m"])
-                        el = t_curr - stop["dep_m"]
+                        el = effective_t_curr - stop["dep_m"]
                         frac = min(1.0, max(0.0, el / dur))
                         target_km = stop["km"] + frac * (next_stop["km"] - stop["km"])
                         last_stop_name = stop["station"]
                         next_stop_name = next_stop["station"]
                         break
             else:
-                if t_curr >= schedule[-1]["arr_m"]:
+                if effective_t_curr >= schedule[-1]["arr_m"]:
                     target_km = total_track_km
                     last_stop_name = schedule[-1]["station"]
                     next_stop_name = "—"

@@ -56,15 +56,15 @@ def save_eticket_token(token, user_info=None):
         return False
 
 def format_date_for_shohoz(date_str):
-    """Converts any date string (YYYY-MM-DD or DD-Mon-YYYY) into Shohoz format: DD-Mon-YYYY"""
+    """Converts any date string (YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY, or DD-Mon-YYYY) into Shohoz format: DD-Mon-YYYY"""
     if not date_str:
         return datetime.now().strftime("%d-%b-%Y")
     d = str(date_str).strip()
-    if "-" in d and len(d.split("-")[0]) == 4:
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y", "%d-%b-%Y", "%d %b %Y"):
         try:
-            dt = datetime.strptime(d, "%Y-%m-%d")
+            dt = datetime.strptime(d, fmt)
             return dt.strftime("%d-%b-%Y")
-        except Exception:
+        except ValueError:
             pass
     return d
 

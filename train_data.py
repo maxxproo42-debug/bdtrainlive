@@ -413,7 +413,31 @@ TRAINS = [
         "off_day": "Saturday",
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 490, "SNIGDHA": 940, "AC_S": 1130, "AC_B": 1690},
-        "stoppages": ["Dhaka", "Dhaka Airport", "Joydebpur", "BB Setu East", "Santahar", "Joypurhat", "Parbatipur", "Saidpur", "Nilphamari", "Domar", "Chilahati"],
+        "stoppages": [
+            "Dhaka", "Dhaka Airport", "Joydebpur", "Tangail", "BB Setu East", 
+            "Ullapara", "Chatmohar", "Ishwardi Bypass", "Natore", "Ahsanganj", "Raninagar", 
+            "Santahar", "Joypurhat", "Parbatipur", "Saidpur", "Nilphamari", "Domar", "Chilahati"
+        ],
+        "station_timings": {
+            "Dhaka": {"arr": "-", "dep": "05:00 PM"},
+            "Dhaka Airport": {"arr": "05:25 PM", "dep": "05:30 PM"},
+            "Joydebpur": {"arr": "05:55 PM", "dep": "05:58 PM"},
+            "Tangail": {"arr": "06:48 PM", "dep": "06:51 PM"},
+            "BB Setu East": {"arr": "07:15 PM", "dep": "07:20 PM"},
+            "Ullapara": {"arr": "08:02 PM", "dep": "08:05 PM"},
+            "Chatmohar": {"arr": "08:30 PM", "dep": "08:33 PM"},
+            "Ishwardi Bypass": {"arr": "09:00 PM", "dep": "09:05 PM"},
+            "Natore": {"arr": "09:47 PM", "dep": "09:50 PM"},
+            "Ahsanganj": {"arr": "10:20 PM", "dep": "10:23 PM"},
+            "Raninagar": {"arr": "10:35 PM", "dep": "10:37 PM"},
+            "Santahar": {"arr": "10:50 PM", "dep": "11:00 PM"},
+            "Joypurhat": {"arr": "11:42 PM", "dep": "11:47 PM"},
+            "Parbatipur": {"arr": "12:45 AM", "dep": "12:55 AM"},
+            "Saidpur": {"arr": "01:18 AM", "dep": "01:23 AM"},
+            "Nilphamari": {"arr": "01:45 AM", "dep": "01:48 AM"},
+            "Domar": {"arr": "02:05 AM", "dep": "02:08 AM"},
+            "Chilahati": {"arr": "02:45 AM", "dep": "-"}
+        },
         "ttms_code": "799"
     },
     {
@@ -430,7 +454,31 @@ TRAINS = [
         "off_day": "Saturday",
         "classes": ["SHOVAN", "SNIGDHA", "AC_S", "AC_B"],
         "fares": {"SHOVAN": 490, "SNIGDHA": 940, "AC_S": 1130, "AC_B": 1690},
-        "stoppages": ["Chilahati", "Domar", "Nilphamari", "Saidpur", "Parbatipur", "Joypurhat", "Santahar", "BB Setu East", "Joydebpur", "Dhaka Airport", "Dhaka"],
+        "stoppages": [
+            "Chilahati", "Domar", "Nilphamari", "Saidpur", "Parbatipur", "Joypurhat", 
+            "Santahar", "Raninagar", "Ahsanganj", "Natore", "Ishwardi Bypass", 
+            "Chatmohar", "Ullapara", "BB Setu East", "Tangail", "Joydebpur", "Dhaka Airport", "Dhaka"
+        ],
+        "station_timings": {
+            "Chilahati": {"arr": "-", "dep": "06:00 AM"},
+            "Domar": {"arr": "06:17 AM", "dep": "06:20 AM"},
+            "Nilphamari": {"arr": "06:37 AM", "dep": "06:40 AM"},
+            "Saidpur": {"arr": "07:02 AM", "dep": "07:07 AM"},
+            "Parbatipur": {"arr": "07:30 AM", "dep": "07:40 AM"},
+            "Joypurhat": {"arr": "08:38 AM", "dep": "08:43 AM"},
+            "Santahar": {"arr": "09:25 AM", "dep": "09:35 AM"},
+            "Raninagar": {"arr": "09:47 AM", "dep": "09:49 AM"},
+            "Ahsanganj": {"arr": "10:02 AM", "dep": "10:05 AM"},
+            "Natore": {"arr": "10:35 AM", "dep": "10:38 AM"},
+            "Ishwardi Bypass": {"arr": "11:20 AM", "dep": "11:25 AM"},
+            "Chatmohar": {"arr": "11:52 AM", "dep": "11:55 AM"},
+            "Ullapara": {"arr": "12:20 PM", "dep": "12:23 PM"},
+            "BB Setu East": {"arr": "01:05 PM", "dep": "01:10 PM"},
+            "Tangail": {"arr": "01:33 PM", "dep": "01:36 PM"},
+            "Joydebpur": {"arr": "02:22 PM", "dep": "02:25 PM"},
+            "Dhaka Airport": {"arr": "02:47 PM", "dep": "02:50 PM"},
+            "Dhaka": {"arr": "03:10 PM", "dep": "-"}
+        },
         "ttms_code": "800"
     },
 
