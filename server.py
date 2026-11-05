@@ -119,6 +119,17 @@ class BDRailAPIHandler(SimpleHTTPRequestHandler):
 
         self.send_json_response({"status": "error", "message": "Endpoint not found"}, status=404)
 
+    def do_HEAD(self):
+        parsed_url = urllib.parse.urlparse(self.path)
+        path = parsed_url.path
+        if path in ["/api/health", "/health", "/api/all_live_trains", "/api/stations"]:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+        else:
+            super().do_HEAD()
+
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
