@@ -42,24 +42,24 @@ def ping_endpoint(url, timeout=45):
         return False, 0, elapsed, str(e)
 
 def run_sentinel():
-    print("=" * 65)
-    print("   🚆 BD RAIL ASSISTANT - 24/7 RENDER KEEP-ALIVE SENTINEL")
-    print("   Pings bdtrainlive.onrender.com every 5 minutes (Zero Cold Starts)")
-    print("=" * 65)
+    print("=" * 65, flush=True)
+    print("   🚆 BD RAIL ASSISTANT - 24/7 RENDER KEEP-ALIVE SENTINEL", flush=True)
+    print("   Pings bdtrainlive.onrender.com every 5 minutes (Zero Cold Starts)", flush=True)
+    print("=" * 65, flush=True)
 
     cycle = 0
     while True:
         cycle += 1
         ts = datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
-        print(f"\n[Cycle #{cycle}] {ts} Pinging Render Web Service...")
+        print(f"\n[Cycle #{cycle}] {ts} Pinging Render Web Service...", flush=True)
 
         for url in RENDER_URLS:
             ok, code, elapsed, err = ping_endpoint(url)
             endpoint_name = url.replace("https://bdtrainlive.onrender.com", "") or "/"
             if ok:
-                print(f"  ✅ [SUCCESS] {endpoint_name:<22} | Status: {code} | Latency: {elapsed}s (Render Awake)")
+                print(f"  ✅ [SUCCESS] {endpoint_name:<22} | Status: {code} | Latency: {elapsed}s (Render Awake)", flush=True)
             else:
-                print(f"  ⚠️ [NOTICE]  {endpoint_name:<22} | Status: {code} | Latency: {elapsed}s | Error: {err}")
+                print(f"  ⚠️ [NOTICE]  {endpoint_name:<22} | Status: {code} | Latency: {elapsed}s | Error: {err}", flush=True)
 
         # Sleep for next interval
         time.sleep(PING_INTERVAL_SECONDS)
