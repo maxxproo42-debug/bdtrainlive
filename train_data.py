@@ -2104,26 +2104,68 @@ TRAINS = [
     }
 ]
 
+def normalize_station_name(query_str):
+    """
+    Normalizes any station input (English canonical, English with description, or Bengali)
+    to the master station key in STATIONS_DICT.
+    """
+    if not query_str:
+        return ""
+    q = str(query_str).strip()
+    q_lower = q.lower()
+
+    # 1. Exact match in STATIONS_DICT
+    for key in STATIONS_DICT:
+        if key.lower() == q_lower:
+            return key
+
+    # 2. Match in STATIONS_DICT name_en or name_bn
+    for key, data in STATIONS_DICT.items():
+        name_en = data.get("name_en", "").lower()
+        name_bn = data.get("name_bn", "")
+        if q_lower == name_en:
+            return key
+        if q in name_bn or (len(q) >= 3 and q in name_bn):
+            return key
+
+    # 3. Substring match
+    for key, data in STATIONS_DICT.items():
+        name_en = data.get("name_en", "").lower()
+        if key.lower() in q_lower or (len(q_lower) >= 4 and q_lower in name_en):
+            return key
+
+    # 4. Clean parenthesis and common suffixes
+    cleaned = q_lower.split("(")[0].strip()
+    for key in STATIONS_DICT:
+        if key.lower() == cleaned:
+            return key
+
+    return q
+
 def search_trains(origin_station, dest_station):
     """Finds trains running between two stations (direct or via route stops)"""
     results = []
-    o_lower = origin_station.strip().lower()
-    d_lower = dest_station.strip().lower()
+    norm_origin = normalize_station_name(origin_station)
+    norm_dest = normalize_station_name(dest_station)
+
+    o_lower = norm_origin.lower()
+    d_lower = norm_dest.lower()
 
     for train in TRAINS:
         stops_lower = [s.lower() for s in train["stoppages"]]
         
-        has_origin = any(o_lower in s for s in stops_lower) or (o_lower in train["origin"].lower())
-        has_dest = any(d_lower in s for s in stops_lower) or (d_lower in train["destination"].lower())
+        has_origin = any(o_lower in s or s in o_lower for s in stops_lower) or (o_lower in train["origin"].lower() or train["origin"].lower() in o_lower)
+        has_dest = any(d_lower in s or s in d_lower for s in stops_lower) or (d_lower in train["destination"].lower() or train["destination"].lower() in d_lower)
 
         if has_origin and has_dest:
             try:
-                o_idx = next(i for i, s in enumerate(stops_lower) if o_lower in s)
-                d_idx = next(i for i, s in enumerate(stops_lower) if d_lower in s)
+                o_idx = next(i for i, s in enumerate(stops_lower) if o_lower in s or s in o_lower)
+                d_idx = next(i for i, s in enumerate(stops_lower) if d_lower in s or s in d_lower)
                 if o_idx < d_idx:
                     results.append(train)
             except StopIteration:
-                if o_lower in train["origin"].lower() and d_lower in train["destination"].lower():
+                if (o_lower in train["origin"].lower() or train["origin"].lower() in o_lower) and \
+                   (d_lower in train["destination"].lower() or train["destination"].lower() in d_lower):
                     results.append(train)
 
     return results

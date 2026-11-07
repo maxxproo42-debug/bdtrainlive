@@ -18,7 +18,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
-from train_data import TRAINS, STATIONS_DICT, search_trains, get_train_by_number
+from train_data import TRAINS, STATIONS_DICT, search_trains, get_train_by_number, normalize_station_name
 from shohoz_live_client import fetch_shohoz_live_trips, format_date_for_shohoz, load_saved_token
 
 # In-memory cache for live Shohoz responses (TTL 120s)
@@ -98,6 +98,8 @@ def get_train_seat_allocation(train, origin_station, dest_station, formatted_doj
 
     # 2. Calibrated Official Railway Quota Allocation by Date & Station Tier
     tier = get_station_tier(origin_station)
+    if idx == 0:
+        tier = 1  # Departure terminal station always holds maximum train quota!
     seed_str = f"{formatted_doj}_{train['number']}_{origin_station}_{dest_station}".lower()
     base_hash = sum((k + 1) * ord(c) for k, c in enumerate(seed_str))
 
@@ -283,17 +285,19 @@ def check_seat_availability(origin, destination, date_of_journey, train_number=N
         matching_trains = [t for t in matching_trains if str(t["number"]) == str(train_number)]
 
     results = []
-    o_lower = origin.strip().lower()
-    d_lower = destination.strip().lower()
+    norm_origin = normalize_station_name(origin)
+    norm_dest = normalize_station_name(destination)
+    o_lower = norm_origin.lower()
+    d_lower = norm_dest.lower()
 
     for train in matching_trains:
         stops = train["stoppages"]
         stops_lower = [s.lower() for s in stops]
 
-        # Find matching indices
+        # Find matching indices with bidirectional precision
         try:
-            o_idx = next(i for i, s in enumerate(stops_lower) if o_lower in s)
-            d_idx = next(i for i, s in enumerate(stops_lower) if d_lower in s)
+            o_idx = next(i for i, s in enumerate(stops_lower) if o_lower in s or s in o_lower)
+            d_idx = next(i for i, s in enumerate(stops_lower) if d_lower in s or s in d_lower)
         except StopIteration:
             o_idx = 0
             d_idx = len(stops) - 1
