@@ -95,8 +95,8 @@ if __name__ == "__main__":
         train_number="732",
         station_name="PARBATIPUR",
         total_seats=1,
-        shovan_seats=0,
-        snigdha_seats=1,
+        shovan_seats=1,
+        snigdha_seats=0,
         fare_shovan=255,
         fare_snigdha=490
     )

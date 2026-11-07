@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-08T01:35:00",
+  "updated_at": "2026-11-08T01:50:00",
   "data_source": "eticket.railway.gov.bd",
   "trips": {
     "12-Nov-2026": {
@@ -7,6 +7,69 @@
         "train_name_bn": "বরেন্দ্র এক্সপ্রেস",
         "train_name_en": "Barendra Express",
         "stoppages": {
+          "CHILAHATI": {
+            "total_available": 24,
+            "classes": {
+              "SHOVAN": {
+                "available": 20,
+                "online": 20,
+                "offline": 0,
+                "fare": 255,
+                "status": "AVAILABLE",
+                "status_bn": "20টি আসন খালি"
+              },
+              "SNIGDHA": {
+                "available": 4,
+                "online": 4,
+                "offline": 0,
+                "fare": 490,
+                "status": "AVAILABLE",
+                "status_bn": "4টি আসন খালি"
+              }
+            }
+          },
+          "DOMAR": {
+            "total_available": 15,
+            "classes": {
+              "SHOVAN": {
+                "available": 15,
+                "online": 15,
+                "offline": 0,
+                "fare": 255,
+                "status": "AVAILABLE",
+                "status_bn": "15টি আসন খালি"
+              },
+              "SNIGDHA": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 490,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              }
+            }
+          },
+          "NILPHAMARI": {
+            "total_available": 22,
+            "classes": {
+              "SHOVAN": {
+                "available": 20,
+                "online": 20,
+                "offline": 0,
+                "fare": 255,
+                "status": "AVAILABLE",
+                "status_bn": "20টি আসন খালি"
+              },
+              "SNIGDHA": {
+                "available": 2,
+                "online": 2,
+                "offline": 0,
+                "fare": 490,
+                "status": "AVAILABLE",
+                "status_bn": "2টি আসন খালি"
+              }
+            }
+          },
           "SAIDPUR": {
             "total_available": 44,
             "classes": {
@@ -46,6 +109,48 @@
                 "fare": 490,
                 "status": "SOLD_OUT",
                 "status_bn": "আসন শেষ (Sold Out)"
+              }
+            }
+          },
+          "JOYPURHAT": {
+            "total_available": 8,
+            "classes": {
+              "SHOVAN": {
+                "available": 8,
+                "online": 8,
+                "offline": 0,
+                "fare": 255,
+                "status": "AVAILABLE",
+                "status_bn": "8টি আসন খালি"
+              },
+              "SNIGDHA": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 490,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              }
+            }
+          },
+          "SANTAHAR": {
+            "total_available": 12,
+            "classes": {
+              "SHOVAN": {
+                "available": 10,
+                "online": 10,
+                "offline": 0,
+                "fare": 255,
+                "status": "AVAILABLE",
+                "status_bn": "10টি আসন খালি"
+              },
+              "SNIGDHA": {
+                "available": 2,
+                "online": 2,
+                "offline": 0,
+                "fare": 490,
+                "status": "AVAILABLE",
+                "status_bn": "2টি আসন খালি"
               }
             }
           }
