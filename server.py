@@ -112,6 +112,11 @@ class BDRailAPIHandler(SimpleHTTPRequestHandler):
                 return
             success = save_eticket_token(str(token).strip(), user)
             if success:
+                try:
+                    from ticket_watcher import clear_shohoz_cache
+                    clear_shohoz_cache()
+                except Exception:
+                    pass
                 self.send_json_response({"status": "success", "message": "বাংলাদেশ রেলওয়ে eticket টোকেন সফলভাবে সিঙ্ক হয়েছে!"})
             else:
                 self.send_json_response({"status": "error", "message": "টোকেন সংরক্ষণ ব্যর্থ হয়েছে।"}, status=500)

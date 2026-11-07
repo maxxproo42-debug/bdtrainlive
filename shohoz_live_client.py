@@ -41,10 +41,15 @@ def load_saved_token():
     return None, None
 
 def save_eticket_token(token, user_info=None):
-    """Saves eticket token securely to local JSON file"""
+    """Saves eticket token securely to local JSON file, or removes if reset"""
     try:
+        if not token or "DELETED" in str(token).upper() or len(str(token).strip()) < 20:
+            if os.path.exists(TOKEN_FILE):
+                os.remove(TOKEN_FILE)
+            return True
+
         payload = {
-            "token": token,
+            "token": token.strip(),
             "user": user_info or {},
             "updated_at": datetime.now().isoformat()
         }

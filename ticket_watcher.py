@@ -24,6 +24,10 @@ from shohoz_live_client import fetch_shohoz_live_trips, format_date_for_shohoz, 
 # In-memory cache for live Shohoz responses (TTL 120s)
 SHOHOZ_CACHE = {}
 
+def clear_shohoz_cache():
+    global SHOHOZ_CACHE
+    SHOHOZ_CACHE.clear()
+
 def parse_time_str_to_minutes(time_str):
     """Parses 'HH:MM AM/PM' to minutes from midnight"""
     try:
@@ -256,8 +260,8 @@ def check_seat_availability(origin, destination, date_of_journey, train_number=N
                 if 0 <= days_ahead <= 10:
                     total_available += avail
 
-            is_live_synced = True
-            data_badge = f"🟢 বাংলাদেশ রেলওয়ে eticket কোটা ({total_available}টি আসন উপলব্ধ)"
+            is_live_synced = False
+            data_badge = "🔴 লাইভ আনসিঙ্কড — আসল ডেটার জন্য eticket সিঙ্ক প্রয়োজন"
 
         results.append({
             "number": train["number"],
@@ -405,37 +409,46 @@ def scan_all_stations_ticket_availability(train_number, date_of_journey, dest_st
 
     formatted_doj = format_date_for_shohoz(date_of_journey)
 
-    # 100% Real-Time Shohoz Live eticket Sync if available
+    # 100% Real-Time Shohoz Live eticket Sync across ALL stations along the route
     live_shohoz_trips_by_stn = {}
-    target_station_to_query = from_station if from_station else (boarding_stations[0] if boarding_stations else None)
+    token, user = load_saved_token()
+    is_authenticated = bool(token)
     
-    # Check if we have an active Shohoz token
-    token, _ = load_saved_token()
     if token and dest_station:
-        # If user picked a specific station, query that station; otherwise query key hubs
-        stations_to_check = [target_station_to_query] if from_station else [s for s in boarding_stations if any(j.lower() in s.lower() for j in major_junctions)][:4]
-        for q_stn in stations_to_check:
+        import concurrent.futures
+
+        # Query all boarding stations along route concurrently
+        def query_single_stn(q_stn):
             if not q_stn:
-                continue
-            cache_key = f"{q_stn.upper()}_{dest_station.upper()}_{formatted_doj}"
-            if cache_key in SHOHOZ_CACHE:
-                cached_res, c_time = SHOHOZ_CACHE[cache_key]
+                return q_stn, None
+            c_key = f"{q_stn.upper()}_{dest_station.upper()}_{formatted_doj}"
+            if c_key in SHOHOZ_CACHE:
+                cached_res, c_time = SHOHOZ_CACHE[c_key]
                 if time.time() - c_time < 120:
                     live_res = cached_res
                 else:
                     live_res = fetch_shohoz_live_trips(q_stn, dest_station, formatted_doj)
-                    SHOHOZ_CACHE[cache_key] = (live_res, time.time())
+                    SHOHOZ_CACHE[c_key] = (live_res, time.time())
             else:
                 live_res = fetch_shohoz_live_trips(q_stn, dest_station, formatted_doj)
-                SHOHOZ_CACHE[cache_key] = (live_res, time.time())
-            
+                SHOHOZ_CACHE[c_key] = (live_res, time.time())
+
+            matched = None
             if live_res.get("is_live_synced"):
                 for raw_t in live_res.get("raw_trains", []):
                     t_num = str(raw_t.get("trip_number") or raw_t.get("train_number") or "")
                     t_name = str(raw_t.get("train_name") or "").lower()
                     if str(train["number"]) in t_num or train["name_en"].lower() in t_name or train["name_bn"] in t_name:
-                        live_shohoz_trips_by_stn[q_stn.lower()] = raw_t
+                        matched = raw_t
                         break
+            return q_stn, matched
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+            future_to_stn = {executor.submit(query_single_stn, s): s for s in boarding_stations}
+            for future in concurrent.futures.as_completed(future_to_stn):
+                q_stn, matched_trip = future.result()
+                if matched_trip:
+                    live_shohoz_trips_by_stn[q_stn.lower()] = matched_trip
 
     for idx, station in enumerate(boarding_stations):
         sched = get_station_schedule(train, station)
@@ -569,20 +582,20 @@ def scan_all_stations_ticket_availability(train_number, date_of_journey, dest_st
         elif has_real_shohoz_seats:
             if station_total_seats > 0:
                 quota_badge = f"🟢 লাইভ সিঙ্কড ({station_total_seats}টি খালি)"
-                badge_class = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                status_text_bn = "আসন উপলব্ধ"
+                badge_class = "bg-emerald-500/25 text-emerald-300 border-emerald-500/50 font-bold shadow-sm"
+                status_text_bn = f"{station_total_seats}টি আসন খালি (অফিসিয়াল API)"
                 can_book = True
             else:
                 quota_badge = "🔴 আসন বিক্রি শেষ (Sold Out)"
                 badge_class = "bg-rose-500/20 text-rose-300 border-rose-500/40"
-                status_text_bn = "আসন শেষ"
+                status_text_bn = "আসন শেষ (০টি খালি)"
                 can_book = False
             total_train_available += station_total_seats
             upcoming_count += 1
         elif is_next_stop:
             if station_total_seats > 0:
                 quota_badge = f"📍 পরবর্তী স্টেশন ({station_total_seats}টি খালি)"
-                badge_class = "bg-cyan-500/20 text-cyan-300 border-cyan-500/50"
+                badge_class = "bg-cyan-500/20 text-cyan-300 border-cyan-500/50 font-bold"
                 status_text_bn = "পরবর্তী আসন্ন স্টপ"
                 can_book = True
             else:
@@ -592,38 +605,19 @@ def scan_all_stations_ticket_availability(train_number, date_of_journey, dest_st
                 can_book = False
             total_train_available += station_total_seats
             upcoming_count += 1
-        elif station_total_seats >= 50:
-            quota_badge = f"🟢 টিকিট উপলব্ধ ({station_total_seats}টি - ৫০+ খালি)"
-            badge_class = "bg-emerald-500/25 text-emerald-300 border-emerald-500/50 font-bold shadow-sm"
-            status_text_bn = "আসন পর্যাপ্ত উপলব্ধ (৫০+)"
-            can_book = True
-            total_train_available += station_total_seats
-            upcoming_count += 1
-        elif station_total_seats >= 20:
-            quota_badge = f"🟢 টিকিট উপলব্ধ ({station_total_seats}টি খালি)"
-            badge_class = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-            status_text_bn = "আসন উপলব্ধ"
-            can_book = True
-            total_train_available += station_total_seats
-            upcoming_count += 1
-        elif station_total_seats > 0:
-            quota_badge = f"🟡 সীমিত আসন ({station_total_seats}টি খালি)"
-            badge_class = "bg-amber-500/20 text-amber-300 border-amber-500/40"
-            status_text_bn = "সীমিত আসন"
-            can_book = True
-            total_train_available += station_total_seats
-            upcoming_count += 1
-        elif days_ahead > 10:
-            quota_badge = "⏰ অগ্রিম বুকিং শুরু হয়নি"
-            badge_class = "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
-            status_text_bn = "১০ দিন আগে খুলবে"
-            can_book = True
-            upcoming_count += 1
         else:
-            quota_badge = "🔴 আসন বিক্রি শেষ (Sold Out)"
-            badge_class = "bg-rose-500/20 text-rose-300 border-rose-500/40"
-            status_text_bn = "আসন শেষ"
-            can_book = False
+            # Unauthenticated fallback (no real token connected)
+            if station_total_seats > 0:
+                quota_badge = f"🟡 আনুমানিক কোটা ({station_total_seats}টি) [আনসিঙ্কড]"
+                badge_class = "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                status_text_bn = "লাইভ দেখতে eticket সিঙ্ক করুন"
+                can_book = True
+                total_train_available += station_total_seats
+            else:
+                quota_badge = "🔴 আসন বিক্রি শেষ / বরাদ্দ শেষ"
+                badge_class = "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                status_text_bn = "আসন নেই"
+                can_book = False
             upcoming_count += 1
 
         stn_bn = STATIONS_DICT.get(station, {}).get("name_bn", station)
@@ -663,6 +657,11 @@ def scan_all_stations_ticket_availability(train_number, date_of_journey, dest_st
 
     return {
         "status": "success",
+        "is_authenticated": is_authenticated,
+        "is_live_synced": bool(live_shohoz_trips_by_stn),
+        "data_source_badge": "🟢 বাংলাদেশ রেলওয়ে অফিসিয়াল eticket.railway.gov.bd লাইভ সিঙ্ক" if live_shohoz_trips_by_stn else "🔴 লাইভ সেশন আনসিঙ্কড (অফিসিয়াল আসন দেখতে eticket সিঙ্ক করুন)",
+        "live_stations_synced_count": len(live_shohoz_trips_by_stn),
+        "user_info": user or {},
         "train_number": str(train["number"]),
         "train_name_bn": train["name_bn"],
         "train_name_en": train["name_en"],
