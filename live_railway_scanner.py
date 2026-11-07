@@ -100,3 +100,4 @@ if __name__ == "__main__":
         fare_shovan=255,
         fare_snigdha=490
     )
+
