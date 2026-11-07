@@ -1766,7 +1766,7 @@ TRAINS = [
         "fares": {"SHOVAN": 255, "SNIGDHA": 490, "AC_S": 585, "AC_B": 880},
         "stoppages": [
             "Panchagarh", "Kismat", "Ruhia", "Thakurgaon Road", "Shibganj", "Pirganj", "Setabganj",
-            "Dinajpur", "Chirirbandar", "Parbatipur", "Fulbari", "Birampur", "Panchbibi", "Joypurhat",
+            "Dinajpur", "Chirirbandar", "Parbatipur", "Phulbari", "Birampur", "Panchbibi", "Joypurhat",
             "Akkelpur", "Santahar", "Ahsanganj", "Madhnagar", "Natore", "Abdulpur", "Rajshahi"
         ],
         "station_timings": {
@@ -1777,7 +1777,7 @@ TRAINS = [
             "Dinajpur": {"arr": "11:07 AM", "dep": "11:15 AM"},
             "Chirirbandar": {"arr": "11:34 AM", "dep": "11:36 AM"},
             "Parbatipur": {"arr": "12:00 PM", "dep": "12:20 PM"},
-            "Fulbari": {"arr": "12:38 PM", "dep": "12:41 PM"},
+            "Phulbari": {"arr": "12:38 PM", "dep": "12:41 PM"},
             "Birampur": {"arr": "12:52 PM", "dep": "12:55 PM"},
             "Joypurhat": {"arr": "01:43 PM", "dep": "01:46 PM"},
             "Santahar": {"arr": "02:40 PM", "dep": "02:45 PM"},
@@ -1803,7 +1803,7 @@ TRAINS = [
         "fares": {"SHOVAN": 255, "SNIGDHA": 490, "AC_S": 585, "AC_B": 880},
         "stoppages": [
             "Rajshahi", "Abdulpur", "Natore", "Madhnagar", "Ahsanganj", "Santahar", "Akkelpur",
-            "Joypurhat", "Panchbibi", "Birampur", "Fulbari", "Parbatipur", "Chirirbandar",
+            "Joypurhat", "Panchbibi", "Birampur", "Phulbari", "Parbatipur", "Chirirbandar",
             "Dinajpur", "Setabganj", "Pirganj", "Shibganj", "Thakurgaon Road", "Ruhia", "Kismat", "Panchagarh"
         ],
         "station_timings": {
@@ -1813,7 +1813,7 @@ TRAINS = [
             "Santahar": {"arr": "11:21 PM", "dep": "11:25 PM"},
             "Joypurhat": {"arr": "12:02 AM", "dep": "12:04 AM"},
             "Birampur": {"arr": "12:37 AM", "dep": "12:40 AM"},
-            "Fulbari": {"arr": "12:58 AM", "dep": "01:01 AM"},
+            "Phulbari": {"arr": "12:58 AM", "dep": "01:01 AM"},
             "Parbatipur": {"arr": "01:30 AM", "dep": "01:50 AM"},
             "Chirirbandar": {"arr": "02:05 AM", "dep": "02:07 AM"},
             "Dinajpur": {"arr": "02:25 AM", "dep": "02:30 AM"},
@@ -2104,6 +2104,27 @@ TRAINS = [
     }
 ]
 
+COMMON_STATION_ALIASES = {
+    "fulbari": "Phulbari",
+    "phulbari": "Phulbari",
+    "ফুলবাড়ী": "Phulbari",
+    "ফুলবাড়ি": "Phulbari",
+    "chattogram": "Chittagong",
+    "চট্টগ্রাম": "Chittagong",
+    "cumilla": "Cumilla",
+    "comilla": "Cumilla",
+    "কুমিল্লা": "Cumilla",
+    "kamlapur": "Dhaka",
+    "kamalapur": "Dhaka",
+    "কমলাপুর": "Dhaka",
+    "poradah": "Poradah",
+    "poradaha": "Poradah",
+    "পোড়াদহ": "Poradah",
+    "পোড়াদহ": "Poradah",
+    "bhairab": "Bhairab Bazar",
+    "ভৈরব": "Bhairab Bazar"
+}
+
 def normalize_station_name(query_str):
     """
     Normalizes any station input (English canonical, English with description, or Bengali)
@@ -2113,6 +2134,12 @@ def normalize_station_name(query_str):
         return ""
     q = str(query_str).strip()
     q_lower = q.lower()
+
+    # 0. Check common aliases
+    if q_lower in COMMON_STATION_ALIASES:
+        return COMMON_STATION_ALIASES[q_lower]
+    if q in COMMON_STATION_ALIASES:
+        return COMMON_STATION_ALIASES[q]
 
     # 1. Exact match in STATIONS_DICT
     for key in STATIONS_DICT:

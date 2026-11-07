@@ -155,6 +155,170 @@
             }
           }
         }
+      },
+      "804": {
+        "train_name_bn": "বাংলাবান্ধা এক্সপ্রেস",
+        "train_name_en": "Banglabandha Express",
+        "stoppages": {
+          "FULBARI": {
+            "total_available": 4,
+            "classes": {
+              "SHOVAN": {
+                "available": 4,
+                "online": 4,
+                "offline": 0,
+                "fare": 160,
+                "status": "AVAILABLE",
+                "status_bn": "4টি আসন খালি"
+              },
+              "SNIGDHA": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 310,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              },
+              "AC_S": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 370,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              },
+              "AC_B": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 550,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              }
+            }
+          },
+          "PHULBARI": {
+            "total_available": 4,
+            "classes": {
+              "SHOVAN": {
+                "available": 4,
+                "online": 4,
+                "offline": 0,
+                "fare": 160,
+                "status": "AVAILABLE",
+                "status_bn": "4টি আসন খালি"
+              },
+              "SNIGDHA": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 310,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              },
+              "AC_S": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 370,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              },
+              "AC_B": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 550,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              }
+            }
+          },
+          "BIRAMPUR": {
+            "total_available": 4,
+            "classes": {
+              "SHOVAN": {
+                "available": 4,
+                "online": 4,
+                "offline": 0,
+                "fare": 150,
+                "status": "AVAILABLE",
+                "status_bn": "4টি আসন খালি"
+              },
+              "SNIGDHA": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 290,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              }
+            }
+          },
+          "PARBATIPUR": {
+            "total_available": 1,
+            "classes": {
+              "SHOVAN": {
+                "available": 1,
+                "online": 1,
+                "offline": 0,
+                "fare": 180,
+                "status": "AVAILABLE",
+                "status_bn": "1টি আসন খালি"
+              },
+              "SNIGDHA": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 350,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              }
+            }
+          },
+          "JOYPURHAT": {
+            "total_available": 6,
+            "classes": {
+              "SHOVAN": {
+                "available": 6,
+                "online": 6,
+                "offline": 0,
+                "fare": 120,
+                "status": "AVAILABLE",
+                "status_bn": "6টি আসন খালি"
+              },
+              "SNIGDHA": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 230,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              }
+            }
+          },
+          "SANTAHAR": {
+            "total_available": 10,
+            "classes": {
+              "SHOVAN": {
+                "available": 8,
+                "online": 8,
+                "offline": 0,
+                "fare": 100,
+                "status": "AVAILABLE",
+                "status_bn": "8টি আসন খালি"
+              },
+              "SNIGDHA": {
+                "available": 2,
+                "online": 2,
+                "offline": 0,
+                "fare": 190,
+                "status": "AVAILABLE",
+                "status_bn": "2টি আসন খালি"
+              }
+            }
+          }
+        }
       }
     }
   }
