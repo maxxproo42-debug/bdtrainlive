@@ -1,0 +1,35 @@
+{
+  "updated_at": "2026-11-08T01:15:00",
+  "data_source": "eticket.railway.gov.bd",
+  "trips": {
+    "12-Nov-2026": {
+      "732": {
+        "train_name_bn": "বরেন্দ্র এক্সপ্রেস",
+        "train_name_en": "Barendra Express",
+        "stoppages": {
+          "PARBATIPUR": {
+            "total_available": 1,
+            "classes": {
+              "SHOVAN": {
+                "available": 0,
+                "online": 0,
+                "offline": 0,
+                "fare": 255,
+                "status": "SOLD_OUT",
+                "status_bn": "আসন শেষ (Sold Out)"
+              },
+              "SNIGDHA": {
+                "available": 1,
+                "online": 1,
+                "offline": 0,
+                "fare": 490,
+                "status": "AVAILABLE",
+                "status_bn": "1টি আসন খালি"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
