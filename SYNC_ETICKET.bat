@@ -1,12 +1,11 @@
 @echo off
-chcp 65001 >nul
-title Bangladesh Railway eticket Auto-Sync Tool
-cd /d "%~dp0"
+title BD Rail Assistant - Official eticket Sync Tool
+cd /d "C:\Users\MD SHAIFUL ISLAM\Desktop\edu\BD_RAIL_ASSISTANT"
 echo ========================================================
-echo   🚆 BD RAIL ASSISTANT - 1-CLICK ETICKET AUTO-SYNC
+echo   BD RAIL ASSISTANT - ETICKET LIVE SYNC TOOL
 echo ========================================================
 echo.
-echo ক্রোম ব্রাউজার ওপেন হচ্ছে...
-"..\.venv\Scripts\python.exe" auto_sync_eticket.py
+echo Starting Chrome browser...
+"C:\Users\MD SHAIFUL ISLAM\Desktop\edu\.venv\Scripts\python.exe" "auto_sync_eticket.py"
 echo.
 pause

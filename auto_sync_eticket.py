@@ -55,8 +55,15 @@ def run_auto_sync():
     try:
         driver = uc.Chrome(options=options)
     except Exception as e:
-        print(f"❌ ক্রোম চালু করতে ত্রুটি: {e}")
-        return False
+        try:
+            # Fallback with explicit version if auto-detection misses
+            driver = uc.Chrome(options=options, version_main=155)
+        except Exception:
+            try:
+                driver = uc.Chrome(options=options, version_main=154)
+            except Exception as e2:
+                print(f"❌ ক্রোম চালু করতে ত্রুটি: {e2}")
+                return False
 
     print("  ✅ ক্রোম সফলভাবে চালু হয়েছে।")
     print("\n[২/৩] eticket.railway.gov.bd/login ওপেন করা হচ্ছে...")
@@ -139,3 +146,4 @@ def run_auto_sync():
 
 if __name__ == "__main__":
     run_auto_sync()
+
