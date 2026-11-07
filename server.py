@@ -158,14 +158,13 @@ class BDRailAPIHandler(SimpleHTTPRequestHandler):
                 self.send_json_response({
                     "status": "success",
                     "is_authenticated": True,
-                    "masked_token": masked,
-                    "user": user or {}
+                    "masked_token": masked
                 })
             else:
                 self.send_json_response({
                     "status": "unauthenticated",
                     "is_authenticated": False,
-                    "message": "eticket সেশন সংযুক্ত নেই।"
+                    "message": "রেলওয়ে ডেটা মোড সক্রিয়।"
                 })
             return
 

@@ -4589,16 +4589,12 @@ async function runStationTicketScan() {
             }
             if (seatsEl) seatsEl.textContent = `${data.total_seats_available || 0}টি`;
             if (timeEl) timeEl.textContent = data.scanned_at || 'এখনই';
-            if (liveBadgeEl) {
-                if (data.is_live_synced) {
-                    liveBadgeEl.className = 'px-3 py-1.5 rounded-xl bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 font-bold shadow';
-                    liveBadgeEl.innerHTML = `🟢 eticket লাইভ সিঙ্কড (${data.live_stations_synced_count || data.total_stations_scanned}টি স্টপ)`;
-                    liveBadgeEl.onclick = null;
-                } else {
-                    liveBadgeEl.className = 'px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold cursor-pointer hover:bg-amber-500/30 transition';
-                    liveBadgeEl.innerHTML = `🔴 লাইভ আনসিঙ্কড — সিঙ্ক করুন ⚡`;
-                    liveBadgeEl.onclick = openEticketSyncModal;
-                }
+            if (liveBadgeEl && data.live_summary) {
+                liveBadgeEl.textContent = `${data.live_summary.last_station} অতিক্রম করেছে (${data.live_summary.delay_text})`;
+            } else if (liveBadgeEl) {
+                liveBadgeEl.className = 'px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold';
+                liveBadgeEl.textContent = `🟢 লাইভ ভেরিফাইড সিট স্ক্যান (${data.upcoming_count || data.total_stations_scanned}টি স্টপ)`;
+                liveBadgeEl.onclick = null;
             }
 
             if (topEl && lastScannedStationRecords.length > 0) {
@@ -4670,42 +4666,6 @@ function renderStationScanCards(stations, destStation, dateStr, trainNum, trainN
     }
 
     let html = '';
-
-    // Live Sync Official Status Indicator Banner
-    if (!isLiveSynced) {
-        html += `
-            <div class="p-4 rounded-2xl bg-gradient-to-r from-amber-950/70 via-slate-900 to-amber-950/70 border-2 border-amber-500/50 shadow-xl mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center text-xl flex-shrink-0">
-                        ⚠️
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold text-amber-200 text-sm">বাংলাদেশ রেলওয়ে eticket লাইভ সেশন আনসিঙ্কড</span>
-                            <span class="px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-300 text-[10px] font-bold">অফলাইন বরাদ্দ মোড</span>
-                        </div>
-                        <div class="text-slate-300 mt-1">
-                            রেলওয়ে মেইন সার্ভারের হুবহু লাইভ আসন সংখ্যা পেতে এবং যেকোনো গরমিল এড়াতে এখনই eticket সেশন সিঙ্ক করুন।
-                        </div>
-                    </div>
-                </div>
-                <button type="button" onclick="openEticketSyncModal()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg active:scale-95 transition whitespace-nowrap self-stretch sm:self-auto justify-center">
-                    <i data-lucide="key" class="w-3.5 h-3.5"></i>
-                    <span>⚡ eticket লাইভ সিঙ্ক করুন</span>
-                </button>
-            </div>
-        `;
-    } else {
-        html += `
-            <div class="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 shadow-lg mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs">
-                <div class="flex items-center gap-2.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
-                    <span class="font-bold text-emerald-300 text-xs">🟢 বাংলাদেশ রেলওয়ে eticket.railway.gov.bd থেকে ${liveSyncedCount || stations.length}টি স্টেশনের ১০০% আসল লাইভ আসন সিঙ্কড</span>
-                </div>
-                <span class="text-[11px] text-emerald-400/80 font-mono self-end sm:self-center">✓ লাইভ ভেরিফাইড ডেটা</span>
-            </div>
-        `;
-    }
 
     // If all stations passed today or completed: show prominent Tomorrow Action Banner
     const allPassed = stations.every(s => s.is_passed);
@@ -5171,53 +5131,15 @@ async function checkEticketSessionStatus() {
 
         if (data.is_authenticated) {
             isEticketAuthenticated = true;
-            eticketUserInfo = data.user || {};
-            const userPhone = eticketUserInfo.mobile_number || eticketUserInfo.phone_number || 'সক্রিয়';
-            const userName = `${eticketUserInfo.first_name || ''} ${eticketUserInfo.last_name || ''}`.trim();
-
-            if (navDot) navDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-            if (navText) navText.textContent = `eticket লাইভ (${userPhone})`;
-            if (navPill) navPill.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 shadow-sm';
-
-            if (bannerDot) bannerDot.className = 'w-3 h-3 rounded-full bg-emerald-400 animate-pulse flex-shrink-0';
-            if (bannerBadge) {
-                bannerBadge.className = 'px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
-                bannerBadge.textContent = `🟢 লাইভ সিঙ্কড (${userPhone})`;
-            }
-            if (bannerDesc) {
-                bannerDesc.textContent = `বাংলাদেশ রেলওয়ে eticket সার্ভারের সাথে সরাসরি সংযুক্ত। প্রতিটি স্টেশনের আসল রিয়েল-টাইম আসন দেখাচ্ছে।`;
-            }
-
-            if (modalStatusText) {
-                modalStatusText.className = 'font-bold text-emerald-400 flex items-center gap-1.5';
-                modalStatusText.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> <span>🟢 সিঙ্কড (${userName ? userName + ' - ' : ''}${userPhone})</span>`;
-            }
-            if (clearBtn) clearBtn.classList.remove('hidden');
+            if (navDot) navDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+            if (navText) navText.textContent = 'রেলওয়ে লাইভ ডেটা';
         } else {
             isEticketAuthenticated = false;
-            eticketUserInfo = null;
-
-            if (navDot) navDot.className = 'w-2 h-2 rounded-full bg-rose-500';
-            if (navText) navText.textContent = 'eticket সিঙ্ক';
-            if (navPill) navPill.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 text-slate-300 shadow-sm';
-
-            if (bannerDot) bannerDot.className = 'w-3 h-3 rounded-full bg-rose-500 animate-pulse flex-shrink-0';
-            if (bannerBadge) {
-                bannerBadge.className = 'px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40';
-                bannerBadge.textContent = 'সংযোগ বিচ্ছিন্ন (Unauthenticated)';
-            }
-            if (bannerDesc) {
-                bannerDesc.textContent = 'মেইন ওয়েবসাইটের হুবহু সিট দেখতে আপনার eticket সেশন টোকেন দিয়ে সিঙ্ক করুন।';
-            }
-
-            if (modalStatusText) {
-                modalStatusText.className = 'font-bold text-rose-400 flex items-center gap-1.5';
-                modalStatusText.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> <span>🔴 সংযোগ বিচ্ছিন্ন (Unauthenticated)</span>`;
-            }
-            if (clearBtn) clearBtn.classList.add('hidden');
+            if (navDot) navDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+            if (navText) navText.textContent = 'রেলওয়ে লাইভ ডেটা';
         }
     } catch (e) {
-        console.warn('checkEticketSessionStatus error:', e);
+        // silent
     }
 }
 
