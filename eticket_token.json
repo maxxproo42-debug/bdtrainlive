@@ -1,0 +1,18 @@
+{
+  "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCJ9.eyJuYmYiOjE3OTQwNzU2NzMsImV4cCI6MTc5NDExODg3MywiaXNzIjoiaHR0cDovL3RyYWluLWlhbS5zaG9ob3ouY29tIiwiYXVkIjoic2hvaG96LmlhbS50cmFpbiIsImNsaWVudF9pZCI6InRyYWluLXRpY2tldC11c2VyIiwiY2xpZW50X3RlbmFudF9pZCI6IjY3YTUxNjNjLTU2NWQtNGNhMC1iMTE3LTg3YzcwMWY2NTRmOSIsImNsaWVudF92ZXJ0aWNhbF9pZCI6IjA2OGU4MDRmLTJkYjctNDQ4OS05OTYzLTc4OWZiN2UwMmJkZiIsInN1YiI6IjliMWJlYjY0LTg1ZGQtNDQxOS04N2U0LTJjYzk3YTJlZWE2MCIsImF1dGhfdGltZSI6MTc5NDA3NTY3MywiaWRwIjoibG9jYWwiLCJwaG9uZV9udW1iZXIiOiIwMTg4NTQzMzY1MiIsImVtYWlsIjoic2tzaGFraWJiZDJAZ21haWwuY29tIiwidXNlcm5hbWUiOiIwMTg4NTQzMzY1MiIsImRpc3BsYXlfbmFtZSI6Ik1kIE1vemFtIEFsaSIsImxvY2FsZSI6ImJuLUJEIiwibmlkbiI6IjI3MTMwNTUxNTUwMDkiLCJuaWRudCI6Ik5JRCIsInJvbGUiOlsidXNlciIsImFub255bW91cyJdLCJzY29wZSI6WyJzaG9ob3ouaWFtLnRyYWluIiwib2ZmbGluZV9hY2Nlc3MiXSwiYW1yIjpbInB3ZCJdfQ.Q3iKgEib2qzCDpaEYkOqvvdD8Xyv1ay--rUEbhBY34MibkTmvacd72PvfGodLxQRwR4JcSpxrnSJX6xHm_KGZFfLwO5Kyxg2vAjduTLIY044TKI8Koa4TtaRAhQI-mYhHs3gbtsr9z5WuqXfIlUD1l0mMF0ANiI2EEJAlj-J-rbQQbi2MMhpybHCA9F5N6QFtru7u_9j4a7b2V_51Mc9-opJjoRzMOnmsYNp3oXyPi13sZPI5_6qmnyTyOeHAKA0m0iZ_WWKVnZEyDCxv8CBtrUfdPSuTAbrZ73iTxgQURzC6h1bFKVAISIpNS4PgLfm24BA5LG_9ihu7pasflxYEg",
+  "user": {
+    "display_name": "Md Mozam Ali",
+    "email": "skshakibbd2@gmail.com",
+    "phone_number": "01885433652",
+    "username": "01885433652",
+    "identification_number": "2713055155009",
+    "identification_type": "NID",
+    "is_email_verified": 0,
+    "is_email_verification_required": false,
+    "is_nid_verification_required": true,
+    "nid_validated": 1,
+    "is_submitted_for_manual_verification": false,
+    "passport": null
+  },
+  "updated_at": "2026-11-08 12:21:13 AM"
+}
